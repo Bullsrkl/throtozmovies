@@ -8,6 +8,7 @@ import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PaymentPopup } from "@/components/PaymentPopup";
 
 interface Plan {
   id: string;
@@ -26,6 +27,8 @@ interface Plan {
 export default function Subscriptions() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -53,8 +56,8 @@ export default function Subscriptions() {
       return;
     }
     
-    toast.info("Payment integration coming soon!");
-    // Will implement UPI payment flow
+    setSelectedPlan(plan);
+    setShowPayment(true);
   };
 
   if (loading) {
@@ -188,6 +191,16 @@ export default function Subscriptions() {
           </div>
         </div>
       </section>
+
+      {/* Payment Popup */}
+      {selectedPlan && user && (
+        <PaymentPopup
+          open={showPayment}
+          onClose={() => setShowPayment(false)}
+          plan={selectedPlan}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 }
