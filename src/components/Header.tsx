@@ -1,11 +1,19 @@
-import { Link } from "react-router-dom";
-import { Search, Upload, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Upload, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 export const Header = () => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Logged out successfully");
+    navigate("/");
+  };
   
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
@@ -52,6 +60,10 @@ export const Header = () => {
                     <User className="h-4 w-4 mr-2" />
                     Dashboard
                   </Link>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
                 </Button>
               </>
             ) : (
