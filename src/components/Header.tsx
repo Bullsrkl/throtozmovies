@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Header = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
@@ -34,6 +34,13 @@ export const Header = () => {
           <div className="flex items-center gap-3">
             {user ? (
               <>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground hover:opacity-90" asChild>
+                    <Link to="/admin">
+                      Admin Panel
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/upload">
                     <Upload className="h-4 w-4 mr-2" />
