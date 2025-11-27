@@ -4,9 +4,11 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown } from "lucide-react";
+import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,12 +48,41 @@ interface Movie {
   profiles: { email: string; full_name: string | null };
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+}
+
+interface PromotionRequest {
+  id: string;
+  user_id: string;
+  movie_id: string;
+  duration_days: number;
+  status: string;
+  requested_at: string;
+  admin_notes: string | null;
+  profiles: {
+    email: string;
+    full_name: string | null;
+  };
+  movies: {
+    id: string;
+    title: string;
+    poster_url: string;
+  };
+}
+
 export default function Admin() {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [promotionRequests, setPromotionRequests] = useState<PromotionRequest[]>([]);
+  const [promotionNotes, setPromotionNotes] = useState<{ [key: string]: string }>({});
   const [stats, setStats] = useState({ totalUsers: 0, totalMovies: 0, pendingPayments: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
@@ -94,6 +125,23 @@ export default function Admin() {
       .limit(50);
     
     if (movieData) setMovies(movieData as any);
+
+    // Fetch all users
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (userData) setUsers(userData);
+
+    // Fetch promotion requests
+    const { data: promoData } = await supabase
+      .from('promotion_requests')
+      .select('*, profiles(email, full_name), movies(id, title, poster_url)')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false });
+    
+    if (promoData) setPromotionRequests(promoData as any);
 
     // Fetch stats
     const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
@@ -183,6 +231,65 @@ export default function Admin() {
       toast.error("Failed to delete movie");
     } else {
       toast.success("Movie deleted");
+      fetchData();
+    }
+  };
+
+  const handleApprovePromotion = async (requestId: string, movieId: string, durationDays: number) => {
+    const notes = promotionNotes[requestId] || "";
+    
+    // Calculate promoted_until date
+    const promotedUntil = new Date();
+    promotedUntil.setDate(promotedUntil.getDate() + durationDays);
+
+    // Update movie promotion
+    const { error: movieError } = await supabase
+      .from('movies')
+      .update({
+        is_promoted: true,
+        promoted_until: promotedUntil.toISOString()
+      })
+      .eq('id', movieId);
+
+    if (movieError) {
+      toast.error("Failed to promote movie");
+      return;
+    }
+
+    // Update promotion request
+    const { error: requestError } = await supabase
+      .from('promotion_requests')
+      .update({
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+        admin_notes: notes
+      })
+      .eq('id', requestId);
+
+    if (requestError) {
+      toast.error("Failed to update request");
+    } else {
+      toast.success("Promotion approved!");
+      fetchData();
+    }
+  };
+
+  const handleRejectPromotion = async (requestId: string) => {
+    const notes = promotionNotes[requestId] || "";
+
+    const { error } = await supabase
+      .from('promotion_requests')
+      .update({
+        status: 'rejected',
+        processed_at: new Date().toISOString(),
+        admin_notes: notes
+      })
+      .eq('id', requestId);
+
+    if (error) {
+      toast.error("Failed to reject promotion");
+    } else {
+      toast.error("Promotion request rejected");
       fetchData();
     }
   };
@@ -280,6 +387,12 @@ export default function Admin() {
               </TabsTrigger>
               <TabsTrigger value="movies" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
                 Movie Management
+              </TabsTrigger>
+              <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
+                User Management
+              </TabsTrigger>
+              <TabsTrigger value="promotions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
+                Promotion Requests
               </TabsTrigger>
             </TabsList>
 
@@ -450,6 +563,94 @@ export default function Admin() {
                         ))}
                       </TableBody>
                     </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* User Management Tab */}
+            <TabsContent value="users">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCog className="h-5 w-5" />
+                    All Users
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {users.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No users found</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Full Name</TableHead>
+                          <TableHead>Registered</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.email}</TableCell>
+                            <TableCell>{user.full_name || 'N/A'}</TableCell>
+                            <TableCell className="text-sm">{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Promotion Requests Tab */}
+            <TabsContent value="promotions">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="h-5 w-5" />
+                    Pending Promotion Requests
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {promotionRequests.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No pending promotion requests</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {promotionRequests.map((request) => (
+                        <div key={request.id} className="border border-border rounded-lg p-4">
+                          <div className="flex gap-4">
+                            <img src={request.movies.poster_url} alt={request.movies.title} className="w-20 h-28 object-cover rounded" />
+                            <div className="flex-1 space-y-2">
+                              <h3 className="font-semibold text-lg">{request.movies.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Requested by {request.profiles.email} • {request.duration_days} days
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(request.requested_at).toLocaleDateString()}
+                              </p>
+                              <Textarea
+                                placeholder="Admin notes (optional)"
+                                value={promotionNotes[request.id] || ""}
+                                onChange={(e) => setPromotionNotes({...promotionNotes, [request.id]: e.target.value})}
+                                className="mt-2"
+                              />
+                              <div className="flex gap-2 mt-3">
+                                <Button size="sm" className="bg-gradient-to-r from-premium to-premium-light" onClick={() => handleApprovePromotion(request.id, request.movies.id, request.duration_days)}>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleRejectPromotion(request.id)}>
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
