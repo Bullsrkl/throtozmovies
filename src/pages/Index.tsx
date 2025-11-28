@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
+import { HeroBanner } from "@/components/HeroBanner";
 import { MovieCard } from "@/components/MovieCard";
 import { MovieDetailModal } from "@/components/MovieDetailModal";
 import { Button } from "@/components/ui/button";
@@ -109,28 +110,8 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
-        <div className="container mx-auto relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h1 className="text-5xl md:text-7xl font-display font-bold bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent">
-              Upload & Monetize Your Movies
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Earn Per Download — Turn Your Content Into Income
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-primary-light" asChild>
-                <a href="/auth">Become Creator</a>
-              </Button>
-              <Button size="lg" variant="outline">
-                Browse Movies
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Banner */}
+      <HeroBanner />
 
       {/* Search & Filter Bar */}
       <section className="border-y border-border bg-card/50 backdrop-blur-sm sticky top-[73px] z-40">
@@ -164,7 +145,7 @@ export default function Index() {
       </section>
 
       {/* Movies Grid */}
-      <section className="container mx-auto px-4 py-12">
+      <section id="movies-section" className="container mx-auto px-4 py-12">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
