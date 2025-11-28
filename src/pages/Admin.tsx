@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone } from "lucide-react";
+import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,6 +53,12 @@ interface UserProfile {
   email: string;
   full_name: string | null;
   created_at: string;
+  subscription?: {
+    status: string;
+    subscription_plans: { plan_name: string };
+  } | null;
+  wallets?: { balance: number }[];
+  movies?: { id: string }[];
 }
 
 interface PromotionRequest {
@@ -83,6 +89,8 @@ export default function Admin() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [promotionRequests, setPromotionRequests] = useState<PromotionRequest[]>([]);
   const [promotionNotes, setPromotionNotes] = useState<{ [key: string]: string }>({});
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [movieSearchQuery, setMovieSearchQuery] = useState("");
   const [stats, setStats] = useState({ totalUsers: 0, totalMovies: 0, pendingPayments: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
@@ -126,13 +134,27 @@ export default function Admin() {
     
     if (movieData) setMovies(movieData as any);
 
-    // Fetch all users
+    // Fetch all users with detailed data
     const { data: userData } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        *,
+        subscriptions!inner(status, subscription_plans(plan_name)),
+        wallets(balance),
+        movies(id)
+      `)
       .order('created_at', { ascending: false });
     
-    if (userData) setUsers(userData);
+    if (userData) {
+      // Transform data to get latest subscription
+      const transformedUsers = userData.map((user: any) => ({
+        ...user,
+        subscription: Array.isArray(user.subscriptions) ? user.subscriptions[0] : null,
+        wallets: user.wallets || [],
+        movies: user.movies || []
+      }));
+      setUsers(transformedUsers);
+    }
 
     // Fetch promotion requests
     const { data: promoData } = await supabase
@@ -572,33 +594,73 @@ export default function Admin() {
             <TabsContent value="users">
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCog className="h-5 w-5" />
-                    All Users
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCog className="h-5 w-5" />
+                      All Users ({users.length})
+                    </CardTitle>
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by email..."
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {users.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">No users found</p>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Full Name</TableHead>
-                          <TableHead>Registered</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.email}</TableCell>
-                            <TableCell>{user.full_name || 'N/A'}</TableCell>
-                            <TableCell className="text-sm">{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Full Name</TableHead>
+                            <TableHead>Subscription</TableHead>
+                            <TableHead>Wallet Balance</TableHead>
+                            <TableHead>Uploads</TableHead>
+                            <TableHead>Registered</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {users
+                            .filter((user) =>
+                              userSearchQuery
+                                ? user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                  (user.full_name && user.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                                : true
+                            )
+                            .map((user) => (
+                              <TableRow key={user.id}>
+                                <TableCell className="font-medium">{user.email}</TableCell>
+                                <TableCell>{user.full_name || 'N/A'}</TableCell>
+                                <TableCell>
+                                  {user.subscription ? (
+                                    <Badge className="bg-premium text-premium-foreground">
+                                      {user.subscription.subscription_plans.plan_name}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">No Plan</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  ₹{user.wallets && user.wallets[0] ? user.wallets[0].balance.toFixed(2) : '0.00'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{user.movies ? user.movies.length : 0}</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {new Date(user.created_at).toLocaleDateString('en-IN')}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>
