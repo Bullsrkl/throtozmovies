@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, CheckCircle2, Loader2 } from "lucide-react";
-import QRCode from "qrcode";
-import { useDeviceDetection } from "@/hooks/useDeviceDetection";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,26 +23,11 @@ const ADMIN_UPI = "tilaks631@paytm"; // Admin UPI ID
 const ADMIN_NAME = "Throtoz Movies";
 
 export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps) {
-  const { isMobile } = useDeviceDetection();
-  const [qrCode, setQrCode] = useState<string>("");
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "waiting" | "success">("idle");
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
 
   const amount = plan.price_inr;
   const upiLink = `upi://pay?pa=${ADMIN_UPI}&pn=${encodeURIComponent(ADMIN_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Subscription ${plan.plan_name}`)}`;
-
-  useEffect(() => {
-    if (open && !isMobile) {
-      QRCode.toDataURL(upiLink, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: "#0B0E13",
-          light: "#FFFFFF",
-        },
-      }).then(setQrCode);
-    }
-  }, [open, isMobile, upiLink]);
 
   // Poll for payment verification
   useEffect(() => {
@@ -69,7 +52,18 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
     }
   }, [paymentStatus, subscriptionId]);
 
-  const handlePaymentInitiated = async () => {
+  const openUpiApp = (app?: string) => {
+    const links: Record<string, string> = {
+      generic: upiLink,
+      gpay: `gpay://upi/pay?pa=${ADMIN_UPI}&pn=${encodeURIComponent(ADMIN_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Subscription ${plan.plan_name}`)}`,
+      phonepe: `phonepe://pay?pa=${ADMIN_UPI}&pn=${encodeURIComponent(ADMIN_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Subscription ${plan.plan_name}`)}`,
+      paytm: `paytmmp://pay?pa=${ADMIN_UPI}&pn=${encodeURIComponent(ADMIN_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Subscription ${plan.plan_name}`)}`,
+    };
+    
+    window.location.href = links[app || 'generic'];
+  };
+
+  const handlePaymentInitiated = async (app?: string) => {
     try {
       // Create pending subscription
       const expiryDate = new Date();
@@ -92,10 +86,8 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
       setSubscriptionId(data.id);
       setPaymentStatus("waiting");
 
-      // Open UPI app on mobile
-      if (isMobile) {
-        window.location.href = upiLink;
-      }
+      // Open UPI app
+      openUpiApp(app);
     } catch (error) {
       console.error("Error creating subscription:", error);
       toast.error("Failed to initiate payment");
@@ -174,43 +166,53 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
             </div>
 
             {/* Right: Payment Options */}
-            <div className="space-y-4">
-              {isMobile ? (
-                <div className="space-y-4">
-                  <Button
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-primary to-primary-light text-lg font-semibold"
-                    onClick={handlePaymentInitiated}
-                  >
-                    Pay via UPI
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Opens your UPI app and pre-fills payee + amount
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-background rounded-xl p-4 border border-border/30 flex flex-col items-center">
-                    {qrCode && (
-                      <img src={qrCode} alt="UPI QR Code" className="w-64 h-64 rounded-lg" />
-                    )}
-                    <p className="text-sm text-muted-foreground text-center mt-4">
-                      Scan QR code with any UPI app
-                    </p>
-                  </div>
-                  <Button
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-primary to-primary-light"
-                    onClick={handlePaymentInitiated}
-                  >
-                    I've Made the Payment
-                  </Button>
-                </div>
-              )}
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Button
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-primary to-primary-light text-lg font-semibold h-14"
+                  onClick={() => handlePaymentInitiated()}
+                >
+                  💳 Pay ₹{amount} via UPI
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Opens your preferred UPI app
+                </p>
+              </div>
 
-              <div className="text-xs text-center text-muted-foreground space-y-1">
+              <div className="space-y-3">
+                <p className="text-sm text-center text-muted-foreground">Or choose your app:</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2 bg-background/50 hover:bg-background border-border/30"
+                    onClick={() => handlePaymentInitiated('gpay')}
+                  >
+                    <span className="text-2xl">G</span>
+                    <span className="text-xs">Google Pay</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2 bg-background/50 hover:bg-background border-border/30"
+                    onClick={() => handlePaymentInitiated('phonepe')}
+                  >
+                    <span className="text-2xl">💜</span>
+                    <span className="text-xs">PhonePe</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2 bg-background/50 hover:bg-background border-border/30"
+                    onClick={() => handlePaymentInitiated('paytm')}
+                  >
+                    <span className="text-2xl">🔵</span>
+                    <span className="text-xs">Paytm</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-xs text-center text-muted-foreground space-y-1 pt-2">
                 <p>Pay to: <strong>{ADMIN_UPI}</strong></p>
-                <p>Amount: <strong>₹{amount}</strong></p>
+                <p className="text-destructive/80">⚠️ Payment verified before activation</p>
               </div>
             </div>
           </div>
