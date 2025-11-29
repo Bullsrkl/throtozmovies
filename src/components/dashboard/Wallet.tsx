@@ -112,6 +112,43 @@ export function Wallet() {
 
     setSubmitting(true);
     try {
+      // Fetch user's active subscription plan to check withdrawal limits
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("subscription_plans(withdrawal_min, withdrawal_max, withdrawal_threshold)")
+        .eq("user_id", user!.id)
+        .eq("status", "active")
+        .single();
+
+      if (subscription?.subscription_plans) {
+        const { withdrawal_min, withdrawal_max, withdrawal_threshold } = subscription.subscription_plans;
+
+        // Check minimum threshold
+        if (wallet.balance < withdrawal_threshold) {
+          toast.error(`Minimum wallet balance of ₹${withdrawal_threshold} required to withdraw`);
+          setSubmitting(false);
+          return;
+        }
+
+        // Check minimum withdrawal amount
+        if (withdrawalAmount < withdrawal_min) {
+          toast.error(`Minimum withdrawal amount is ₹${withdrawal_min}`);
+          setSubmitting(false);
+          return;
+        }
+
+        // Check maximum withdrawal amount
+        if (withdrawalAmount > withdrawal_max) {
+          toast.error(`Maximum withdrawal amount is ₹${withdrawal_max}`);
+          setSubmitting(false);
+          return;
+        }
+      } else {
+        toast.error("No active subscription found. Please subscribe to a plan to withdraw.");
+        setSubmitting(false);
+        return;
+      }
+
       const platformFee = calculateFee(withdrawalAmount);
       const netAmount = calculateNetAmount(withdrawalAmount);
 

@@ -31,10 +31,7 @@ export default function Index() {
   const fetchMovies = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("movies")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("movies").select("*");
 
       if (selectedCategory !== "All") {
         query = query.eq("category", selectedCategory);
@@ -44,10 +41,25 @@ export default function Index() {
         query = query.ilike("title", `%${searchQuery}%`);
       }
 
+      // Order by promoted status first, then by creation date
+      query = query.order("is_promoted", { ascending: false, nullsFirst: false })
+                   .order("created_at", { ascending: false });
+
       const { data, error } = await query;
 
       if (error) throw error;
-      setMovies(data || []);
+      
+      // Filter to only show currently promoted movies at top
+      const now = new Date().toISOString();
+      const sortedMovies = data?.sort((a, b) => {
+        const aPromoted = a.is_promoted && a.promoted_until && a.promoted_until > now;
+        const bPromoted = b.is_promoted && b.promoted_until && b.promoted_until > now;
+        if (aPromoted && !bPromoted) return -1;
+        if (!aPromoted && bPromoted) return 1;
+        return 0;
+      });
+      
+      setMovies(sortedMovies || []);
     } catch (error: any) {
       toast.error("Failed to load movies");
     } finally {
@@ -69,7 +81,10 @@ export default function Index() {
 
   const handleDownload = async (movieId: string, title: string) => {
     const movie = movies.find(m => m.id === movieId);
-    if (movie) {
+    if (!movie) return;
+
+    try {
+      // Update movie stats
       await supabase
         .from("movies")
         .update({ 
@@ -77,8 +92,49 @@ export default function Index() {
           downloads: (movie.downloads || 0) + 1
         })
         .eq("id", movieId);
+
+      // Get uploader's active subscription to calculate earnings
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("subscription_plans(earning_per_download)")
+        .eq("user_id", movie.uploader_id)
+        .eq("status", "active")
+        .single();
+
+      if (subscription?.subscription_plans?.earning_per_download) {
+        const earning = subscription.subscription_plans.earning_per_download;
+
+        // Create download log
+        await supabase.from("download_logs").insert({
+          movie_id: movieId,
+          uploader_id: movie.uploader_id,
+          earning: earning,
+          downloader_ip: null // Could add IP tracking if needed
+        });
+
+        // Update uploader's wallet
+        const { data: wallet } = await supabase
+          .from("wallets")
+          .select("balance, total_earnings")
+          .eq("user_id", movie.uploader_id)
+          .single();
+
+        if (wallet) {
+          await supabase
+            .from("wallets")
+            .update({
+              balance: wallet.balance + earning,
+              total_earnings: wallet.total_earnings + earning
+            })
+            .eq("user_id", movie.uploader_id);
+        }
+      }
+
+      toast.success(`Downloading ${title}...`);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.success(`Downloading ${title}...`);
     }
-    toast.success(`Downloading ${title}...`);
   };
 
   const handleShare = async (movieId: string, title: string) => {
