@@ -44,6 +44,10 @@ interface Movie {
   uploader_id: string;
   views: number;
   downloads: number;
+  clicks: number;
+  impressions: number;
+  is_promoted: boolean;
+  promoted_until: string | null;
   created_at: string;
   profiles: { email: string; full_name: string | null };
 }
@@ -134,12 +138,12 @@ export default function Admin() {
     
     if (movieData) setMovies(movieData as any);
 
-    // Fetch all users with detailed data
+    // Fetch all users with detailed data (left join to include users without subscriptions)
     const { data: userData } = await supabase
       .from('profiles')
       .select(`
         *,
-        subscriptions!inner(status, subscription_plans(plan_name)),
+        subscriptions(status, subscription_plans(plan_name)),
         wallets(balance),
         movies(id)
       `)
@@ -214,17 +218,45 @@ export default function Admin() {
   };
 
   const handleCompleteWithdrawal = async (withdrawalId: string) => {
-    const { error } = await supabase
+    // Get withdrawal details
+    const withdrawal = withdrawals.find(w => w.id === withdrawalId);
+    if (!withdrawal) return;
+
+    // Update withdrawal status
+    const { error: withdrawalError } = await supabase
       .from('withdrawals')
       .update({ status: 'paid', processed_at: new Date().toISOString() })
       .eq('id', withdrawalId);
 
-    if (error) {
+    if (withdrawalError) {
       toast.error("Failed to complete withdrawal");
-    } else {
-      toast.success("Withdrawal marked as paid!");
-      fetchData();
+      return;
     }
+
+    // Update user wallet - deduct amount and update total_withdrawn
+    const { data: walletData } = await supabase
+      .from('wallets')
+      .select('balance, total_withdrawn')
+      .eq('user_id', withdrawal.user_id)
+      .single();
+
+    if (walletData) {
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .update({
+          balance: walletData.balance - withdrawal.amount,
+          total_withdrawn: (walletData.total_withdrawn || 0) + withdrawal.net_amount
+        })
+        .eq('user_id', withdrawal.user_id);
+
+      if (walletError) {
+        toast.error("Failed to update wallet");
+        return;
+      }
+    }
+
+    toast.success("Withdrawal completed and wallet updated!");
+    fetchData();
   };
 
   const handleRejectWithdrawal = async (withdrawalId: string) => {
@@ -312,6 +344,35 @@ export default function Admin() {
       toast.error("Failed to reject promotion");
     } else {
       toast.error("Promotion request rejected");
+      fetchData();
+    }
+  };
+
+  const handleInstantPromote = async (movieId: string) => {
+    const days = prompt("Enter promotion duration (in days):", "7");
+    if (!days) return;
+
+    const durationDays = parseInt(days);
+    if (isNaN(durationDays) || durationDays <= 0) {
+      toast.error("Invalid duration");
+      return;
+    }
+
+    const promotedUntil = new Date();
+    promotedUntil.setDate(promotedUntil.getDate() + durationDays);
+
+    const { error } = await supabase
+      .from('movies')
+      .update({
+        is_promoted: true,
+        promoted_until: promotedUntil.toISOString()
+      })
+      .eq('id', movieId);
+
+    if (error) {
+      toast.error("Failed to promote movie");
+    } else {
+      toast.success(`Movie promoted for ${durationDays} days!`);
       fetchData();
     }
   };
@@ -545,46 +606,91 @@ export default function Admin() {
             <TabsContent value="movies">
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle>All Movies</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>All Movies ({movies.length})</CardTitle>
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by title..."
+                        value={movieSearchQuery}
+                        onChange={(e) => setMovieSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {movies.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No movies uploaded</p>
+                  {movies.filter(m => m.title.toLowerCase().includes(movieSearchQuery.toLowerCase())).length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No movies found</p>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Uploader</TableHead>
-                          <TableHead>Views</TableHead>
-                          <TableHead>Downloads</TableHead>
-                          <TableHead>Uploaded</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {movies.map((movie) => (
-                          <TableRow key={movie.id}>
-                            <TableCell className="font-medium">{movie.title}</TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="text-sm">{movie.profiles.full_name || 'N/A'}</div>
-                                <div className="text-xs text-muted-foreground">{movie.profiles.email}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{movie.views || 0}</TableCell>
-                            <TableCell>{movie.downloads || 0}</TableCell>
-                            <TableCell className="text-sm">{new Date(movie.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="destructive" onClick={() => handleDeleteMovie(movie.id)}>
-                                <Trash2 className="h-3 w-3 mr-1" />
-                                Delete
-                              </Button>
-                            </TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Uploader</TableHead>
+                            <TableHead>Impressions</TableHead>
+                            <TableHead>Clicks</TableHead>
+                            <TableHead>Downloads</TableHead>
+                            <TableHead>CTR %</TableHead>
+                            <TableHead>Promoted</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {movies
+                            .filter(m => m.title.toLowerCase().includes(movieSearchQuery.toLowerCase()))
+                            .map((movie) => {
+                              const ctr = movie.impressions > 0 
+                                ? ((movie.clicks || 0) / movie.impressions * 100).toFixed(2)
+                                : '0.00';
+                              const isPromoted = movie.is_promoted && movie.promoted_until && new Date(movie.promoted_until) > new Date();
+                              
+                              return (
+                                <TableRow key={movie.id}>
+                                  <TableCell className="font-medium">{movie.title}</TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <div className="text-sm">{movie.profiles.full_name || 'N/A'}</div>
+                                      <div className="text-xs text-muted-foreground">{movie.profiles.email}</div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{movie.impressions || 0}</TableCell>
+                                  <TableCell>{movie.clicks || 0}</TableCell>
+                                  <TableCell>{movie.downloads || 0}</TableCell>
+                                  <TableCell className="font-semibold">{ctr}%</TableCell>
+                                  <TableCell>
+                                    {isPromoted ? (
+                                      <Badge className="bg-premium text-premium-foreground">
+                                        Active
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline">No</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        className="border-admin/30"
+                                        onClick={() => handleInstantPromote(movie.id)}
+                                      >
+                                        <Megaphone className="h-3 w-3 mr-1" />
+                                        Promote
+                                      </Button>
+                                      <Button size="sm" variant="destructive" onClick={() => handleDeleteMovie(movie.id)}>
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>

@@ -1,10 +1,52 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, Users, DollarSign, Download, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export function HeroBanner() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    creators: 0,
+    paidOut: 0,
+    downloads: 0
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Get total creators count
+      const { count: creatorsCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Get total paid out (sum of total_withdrawn from wallets)
+      const { data: walletsData } = await supabase
+        .from('wallets')
+        .select('total_withdrawn');
+      
+      const totalPaidOut = walletsData?.reduce((sum, w) => sum + (w.total_withdrawn || 0), 0) || 0;
+
+      // Get total downloads (sum of downloads from movies)
+      const { data: moviesData } = await supabase
+        .from('movies')
+        .select('downloads');
+      
+      const totalDownloads = moviesData?.reduce((sum, m) => sum + (m.downloads || 0), 0) || 0;
+
+      setStats({
+        creators: creatorsCount || 0,
+        paidOut: totalPaidOut,
+        downloads: totalDownloads
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
 
   const scrollToMovies = () => {
     const moviesSection = document.getElementById("movies-section");
@@ -52,21 +94,21 @@ export function HeroBanner() {
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-premium" />
               <div className="text-left">
-                <div className="font-bold text-xl">10,000+</div>
+                <div className="font-bold text-xl">{stats.creators.toLocaleString('en-IN')}+</div>
                 <div className="text-xs text-muted-foreground">Creators</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-premium" />
               <div className="text-left">
-                <div className="font-bold text-xl">₹10 Lakh+</div>
+                <div className="font-bold text-xl">₹{(stats.paidOut / 100000).toFixed(1)} Lakh+</div>
                 <div className="text-xs text-muted-foreground">Paid Out</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Download className="h-5 w-5 text-premium" />
               <div className="text-left">
-                <div className="font-bold text-xl">1M+</div>
+                <div className="font-bold text-xl">{(stats.downloads / 1000).toFixed(0)}K+</div>
                 <div className="text-xs text-muted-foreground">Downloads</div>
               </div>
             </div>
