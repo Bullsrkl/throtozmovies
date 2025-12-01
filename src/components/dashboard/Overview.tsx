@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Wallet, TrendingUp, Calendar, Crown } from "lucide-react";
+import { Upload, Wallet, TrendingUp, Calendar, Crown, Youtube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface Stats {
   totalUploads: number;
@@ -14,6 +15,7 @@ interface Stats {
   subscriptionStatus: string | null;
   subscriptionPlan: string | null;
   expiryDate: string | null;
+  youtubeBonusClaimed: boolean;
 }
 
 export function Overview() {
@@ -26,6 +28,7 @@ export function Overview() {
     subscriptionStatus: null,
     subscriptionPlan: null,
     expiryDate: null,
+    youtubeBonusClaimed: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +71,13 @@ export function Overview() {
         .limit(1)
         .single();
 
+      // Fetch YouTube bonus status
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("youtube_bonus_claimed")
+        .eq("id", user!.id)
+        .single();
+
       setStats({
         totalUploads: uploadsCount || 0,
         totalDownloads: downloadsCount || 0,
@@ -75,6 +85,7 @@ export function Overview() {
         subscriptionStatus: subscriptionData?.status || null,
         subscriptionPlan: subscriptionData?.subscription_plans?.plan_name || null,
         expiryDate: subscriptionData?.expiry_date || null,
+        youtubeBonusClaimed: profileData?.youtube_bonus_claimed || false,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -90,6 +101,50 @@ export function Overview() {
     const nextSaturday = new Date(today);
     nextSaturday.setDate(today.getDate() + daysUntilSaturday);
     return nextSaturday.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
+
+  const handleYouTubeSubscribe = async () => {
+    if (stats.youtubeBonusClaimed) {
+      toast.info("You've already claimed this bonus!");
+      openYouTubeChannel();
+      return;
+    }
+
+    try {
+      // Mark as claimed
+      await supabase
+        .from("profiles")
+        .update({ youtube_bonus_claimed: true })
+        .eq("id", user!.id);
+      
+      // Credit ₹100 bonus
+      await supabase.rpc('credit_wallet_bonus', {
+        p_user_id: user!.id,
+        p_amount: 100
+      });
+
+      toast.success("₹100 bonus credited to your wallet!");
+      
+      // Update local state
+      setStats(prev => ({ ...prev, youtubeBonusClaimed: true, walletBalance: prev.walletBalance + 100 }));
+      
+      // Open YouTube
+      openYouTubeChannel();
+    } catch (error) {
+      console.error("Error claiming bonus:", error);
+      toast.error("Failed to claim bonus");
+    }
+  };
+
+  const openYouTubeChannel = () => {
+    const youtubeDeepLink = "vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1";
+    const webFallback = "https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1";
+    
+    window.location.href = youtubeDeepLink;
+    
+    setTimeout(() => {
+      window.open(webFallback, '_blank');
+    }, 500);
   };
 
   if (loading) {
@@ -112,6 +167,27 @@ export function Overview() {
           New Upload
         </Button>
       </div>
+
+      {/* YouTube Subscribe Bonus Card */}
+      <Card className="shadow-card border-2 border-red-500/20 bg-gradient-to-r from-red-500/5 to-red-600/5">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <Youtube className="h-8 w-8 text-red-500" />
+            <div>
+              <p className="font-semibold">Earn ₹100 Bonus!</p>
+              <p className="text-sm text-muted-foreground">
+                {stats.youtubeBonusClaimed ? "Already claimed - Visit channel" : "Subscribe to our YouTube channel"}
+              </p>
+            </div>
+          </div>
+          <Button 
+            className="bg-red-600 hover:bg-red-700"
+            onClick={handleYouTubeSubscribe}
+          >
+            {stats.youtubeBonusClaimed ? "Visit Channel" : "Subscribe & Earn ₹100"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Subscription Badge */}
       {stats.subscriptionPlan && (

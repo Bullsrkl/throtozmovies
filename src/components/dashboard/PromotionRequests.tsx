@@ -18,11 +18,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Megaphone, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Megaphone, Clock, CheckCircle, XCircle, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
+
+const PROMOTION_PRICING: Record<number, number> = {
+  7: 50,
+  14: 100,
+  30: 200,
+};
+
+const ADMIN_UPI = "bharat00070@ybl";
 
 interface Movie {
   id: string;
@@ -51,7 +59,9 @@ export function PromotionRequests() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [requests, setRequests] = useState<PromotionRequest[]>([]);
   const [selectedMovieId, setSelectedMovieId] = useState(preselectedMovieId || "");
-  const [duration, setDuration] = useState("7");
+  const [duration, setDuration] = useState<number>(7);
+  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "upi">("wallet");
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,7 +69,22 @@ export function PromotionRequests() {
     if (!user) return;
     fetchMovies();
     fetchRequests();
+    fetchWalletBalance();
   }, [user]);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const { data } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", user!.id)
+        .single();
+      
+      setWalletBalance(data?.balance || 0);
+    } catch (error) {
+      console.error("Error fetching wallet:", error);
+    }
+  };
 
   const fetchMovies = async () => {
     try {
@@ -93,6 +118,16 @@ export function PromotionRequests() {
     }
   };
 
+  const openUpiApp = (promotionPrice: number) => {
+    const upiUrl = `upi://pay?pa=${ADMIN_UPI}&pn=Throtoz%20Movies&am=${promotionPrice}&cu=INR&tn=Promotion%20Payment`;
+    window.location.href = upiUrl;
+    
+    setTimeout(() => {
+      const fallbackUrl = `https://pay.google.com/gp/v/pay?pa=${ADMIN_UPI}&pn=Throtoz%20Movies&am=${promotionPrice}&cu=INR`;
+      window.open(fallbackUrl, '_blank');
+    }, 500);
+  };
+
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -101,10 +136,10 @@ export function PromotionRequests() {
       return;
     }
 
-    // Check if user has active subscription
+    // Check for active subscription
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("*")
+      .select("status")
       .eq("user_id", user!.id)
       .eq("status", "active")
       .eq("payment_verified", true)
@@ -116,26 +151,80 @@ export function PromotionRequests() {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.from("promotion_requests").insert({
-        user_id: user!.id,
-        movie_id: selectedMovieId,
-        duration_days: parseInt(duration),
-        status: "pending",
-      });
+    const promotionPrice = PROMOTION_PRICING[duration];
 
-      if (error) throw error;
+    // Wallet payment
+    if (paymentMethod === "wallet") {
+      if (walletBalance < promotionPrice) {
+        toast.error(`Insufficient balance. You need ₹${promotionPrice} but have ₹${walletBalance.toFixed(2)}`);
+        return;
+      }
 
-      toast.success("Promotion request submitted! Waiting for admin approval.");
-      setSelectedMovieId("");
-      setDuration("7");
-      fetchRequests();
-    } catch (error: any) {
-      console.error("Error submitting request:", error);
-      toast.error(error.message || "Failed to submit promotion request");
-    } finally {
-      setSubmitting(false);
+      setSubmitting(true);
+      try {
+        // Deduct from wallet
+        const { error: walletError } = await supabase
+          .from("wallets")
+          .update({ 
+            balance: walletBalance - promotionPrice,
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", user!.id);
+
+        if (walletError) throw walletError;
+
+        // Create promotion request
+        const { error } = await supabase.from("promotion_requests").insert({
+          user_id: user!.id,
+          movie_id: selectedMovieId,
+          duration_days: duration,
+          promotion_price: promotionPrice,
+          payment_method: "wallet",
+          status: "pending",
+        });
+
+        if (error) throw error;
+
+        toast.success(`₹${promotionPrice} deducted from wallet. Promotion request submitted!`);
+        setSelectedMovieId("");
+        fetchRequests();
+        fetchWalletBalance();
+      } catch (error: any) {
+        console.error("Error submitting request:", error);
+        toast.error(error.message || "Failed to submit promotion request");
+      } finally {
+        setSubmitting(false);
+      }
+    } 
+    // UPI payment
+    else {
+      setSubmitting(true);
+      try {
+        const { error } = await supabase.from("promotion_requests").insert({
+          user_id: user!.id,
+          movie_id: selectedMovieId,
+          duration_days: duration,
+          promotion_price: promotionPrice,
+          payment_method: "upi",
+          status: "pending",
+        });
+
+        if (error) throw error;
+
+        toast.success("Opening UPI app for payment...");
+        openUpiApp(promotionPrice);
+        
+        setTimeout(() => {
+          toast.info("Complete the UPI payment. Admin will verify and approve your request.");
+          setSelectedMovieId("");
+          fetchRequests();
+        }, 1000);
+      } catch (error: any) {
+        console.error("Error submitting request:", error);
+        toast.error(error.message || "Failed to submit promotion request");
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -177,33 +266,57 @@ export function PromotionRequests() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duration">Promotion Duration</Label>
-              <Select value={duration} onValueChange={setDuration}>
+              <Label htmlFor="duration">Duration</Label>
+              <Select
+                value={duration.toString()}
+                onValueChange={(value) => setDuration(parseInt(value))}
+              >
                 <SelectTrigger id="duration">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">7 Days</SelectItem>
-                  <SelectItem value="14">14 Days</SelectItem>
-                  <SelectItem value="30">30 Days</SelectItem>
+                  <SelectItem value="7">7 Days - ₹50</SelectItem>
+                  <SelectItem value="14">14 Days - ₹100</SelectItem>
+                  <SelectItem value="30">30 Days - ₹200</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="p-4 rounded-lg bg-accent border border-border">
-              <p className="text-sm text-muted-foreground">
-                <strong>How it works:</strong> Your content will appear at the top of the
-                homepage for the selected duration after admin approval. This increases
-                visibility and potential downloads.
-              </p>
+            <div className="space-y-3">
+              <Label>Payment Method</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  type="button"
+                  variant={paymentMethod === "wallet" ? "default" : "outline"}
+                  onClick={() => setPaymentMethod("wallet")}
+                  className={paymentMethod === "wallet" ? "bg-premium hover:bg-premium/90" : ""}
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Wallet
+                  <span className="ml-1 text-xs">(₹{walletBalance.toFixed(0)})</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === "upi" ? "default" : "outline"}
+                  onClick={() => setPaymentMethod("upi")}
+                  className={paymentMethod === "upi" ? "bg-primary hover:bg-primary/90" : ""}
+                >
+                  💳 UPI
+                </Button>
+              </div>
+              <div className="p-3 rounded-lg bg-accent border border-border">
+                <p className="text-sm font-medium">
+                  Promotion Cost: <span className="text-premium">₹{PROMOTION_PRICING[duration]}</span> for {duration} days
+                </p>
+              </div>
             </div>
 
             <Button
               type="submit"
               disabled={submitting || !selectedMovieId}
-              className="w-full bg-gradient-to-r from-premium to-premium-light"
+              className="w-full bg-gradient-to-r from-primary to-primary/80"
             >
-              {submitting ? "Submitting..." : "Submit Request"}
+              {submitting ? "Submitting..." : `Pay ₹${PROMOTION_PRICING[duration]} & Submit`}
             </Button>
           </form>
         </CardContent>

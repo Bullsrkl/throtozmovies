@@ -40,8 +40,18 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
           .single();
 
         if (data?.payment_verified) {
+          // Credit ₹110 bonus to wallet
+          try {
+            await supabase.rpc('credit_wallet_bonus', {
+              p_user_id: userId,
+              p_amount: 110
+            });
+            toast.success("Payment verified! ₹110 bonus credited to your wallet!");
+          } catch (bonusError) {
+            console.error("Error crediting bonus:", bonusError);
+          }
+
           setPaymentStatus("success");
-          toast.success("Payment verified! Subscription activated.");
           setTimeout(() => {
             window.location.href = "/dashboard";
           }, 2000);
@@ -50,7 +60,7 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
 
       return () => clearInterval(interval);
     }
-  }, [paymentStatus, subscriptionId]);
+  }, [paymentStatus, subscriptionId, userId]);
 
   const openUpiApp = (app?: string) => {
     const links: Record<string, string> = {
