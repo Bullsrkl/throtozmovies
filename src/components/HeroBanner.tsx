@@ -134,41 +134,6 @@ export function HeroBanner() {
             </Button>
           </div>
         </div>
-
-        {/* Platform Features */}
-        <div className="grid md:grid-cols-4 gap-6 mt-16 max-w-5xl mx-auto">
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-border shadow-card hover:shadow-elegant transition-all">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-premium/10 mb-4">
-              <DollarSign className="h-6 w-6 text-premium" />
-            </div>
-            <h3 className="font-display font-semibold mb-2">Earn Per Download</h3>
-            <p className="text-sm text-muted-foreground">Get paid for every download of your content</p>
-          </Card>
-
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-border shadow-card hover:shadow-elegant transition-all">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-premium/10 mb-4">
-              <TrendingUp className="h-6 w-6 text-premium" />
-            </div>
-            <h3 className="font-display font-semibold mb-2">Real-Time Analytics</h3>
-            <p className="text-sm text-muted-foreground">Track your earnings and performance live</p>
-          </Card>
-
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-border shadow-card hover:shadow-elegant transition-all">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-premium/10 mb-4">
-              <Play className="h-6 w-6 text-premium" />
-            </div>
-            <h3 className="font-display font-semibold mb-2">Easy Upload</h3>
-            <p className="text-sm text-muted-foreground">Upload movies in minutes with simple interface</p>
-          </Card>
-
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-border shadow-card hover:shadow-elegant transition-all">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-premium/10 mb-4">
-              <Users className="h-6 w-6 text-premium" />
-            </div>
-            <h3 className="font-display font-semibold mb-2">Weekly Payouts</h3>
-            <p className="text-sm text-muted-foreground">Withdraw earnings every Saturday via UPI</p>
-          </Card>
-        </div>
       </div>
     </section>
   );
