@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock, Youtube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ export function Wallet() {
   const [upiId, setUpiId] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [youtubeBonusClaimed, setYoutubeBonusClaimed] = useState(false);
 
   const PLATFORM_FEE_PERCENT = 3;
 
@@ -49,7 +50,22 @@ export function Wallet() {
     if (!user) return;
     fetchWalletData();
     fetchWithdrawals();
+    fetchYoutubeStatus();
   }, [user]);
+
+  const fetchYoutubeStatus = async () => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("youtube_bonus_claimed")
+        .eq("id", user!.id)
+        .single();
+      
+      setYoutubeBonusClaimed(data?.youtube_bonus_claimed || false);
+    } catch (error) {
+      console.error("Error fetching YouTube status:", error);
+    }
+  };
 
   const fetchWalletData = async () => {
     try {
@@ -89,6 +105,45 @@ export function Wallet() {
 
   const calculateNetAmount = (amount: number) => {
     return amount - calculateFee(amount);
+  };
+
+  const handleYouTubeSubscribe = async () => {
+    if (youtubeBonusClaimed) {
+      toast.info("You've already claimed this bonus!");
+      openYouTubeChannel();
+      return;
+    }
+
+    try {
+      await supabase
+        .from("profiles")
+        .update({ youtube_bonus_claimed: true })
+        .eq("id", user!.id);
+      
+      await supabase.rpc('credit_wallet_bonus', {
+        p_user_id: user!.id,
+        p_amount: 100
+      });
+
+      toast.success("₹100 bonus credited to your wallet!");
+      setYoutubeBonusClaimed(true);
+      fetchWalletData();
+      openYouTubeChannel();
+    } catch (error) {
+      console.error("Error claiming bonus:", error);
+      toast.error("Failed to claim bonus");
+    }
+  };
+
+  const openYouTubeChannel = () => {
+    const youtubeDeepLink = "vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1";
+    const webFallback = "https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1";
+    
+    window.location.href = youtubeDeepLink;
+    
+    setTimeout(() => {
+      window.open(webFallback, '_blank');
+    }, 500);
   };
 
   const handleWithdrawalRequest = async (e: React.FormEvent) => {
@@ -185,6 +240,27 @@ export function Wallet() {
         <h2 className="text-2xl font-display font-bold">Wallet</h2>
         <p className="text-muted-foreground">Manage your earnings and withdrawals</p>
       </div>
+
+      {/* YouTube Subscribe Bonus Card */}
+      <Card className="shadow-card border-2 border-red-500/20 bg-gradient-to-r from-red-500/5 to-red-600/5">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <Youtube className="h-8 w-8 text-red-500" />
+            <div>
+              <p className="font-semibold">Earn ₹100 Bonus!</p>
+              <p className="text-sm text-muted-foreground">
+                {youtubeBonusClaimed ? "Already claimed - Visit channel" : "Subscribe to our YouTube channel"}
+              </p>
+            </div>
+          </div>
+          <Button 
+            className="bg-red-600 hover:bg-red-700"
+            onClick={handleYouTubeSubscribe}
+          >
+            {youtubeBonusClaimed ? "Visit Channel" : "Subscribe & Earn ₹100"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Wallet Stats */}
       <div className="grid md:grid-cols-3 gap-6">
