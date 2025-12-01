@@ -130,9 +130,20 @@ export default function Index() {
         }
       }
 
+      // Open the movie's direct link in new tab
+      if (movie.direct_link) {
+        window.open(movie.direct_link, '_blank');
+      }
+
       toast.success(`Downloading ${title}...`);
     } catch (error) {
       console.error("Download error:", error);
+      
+      // Still open link even if stats update fails
+      if (movie.direct_link) {
+        window.open(movie.direct_link, '_blank');
+      }
+      
       toast.success(`Downloading ${title}...`);
     }
   };
