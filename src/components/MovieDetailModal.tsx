@@ -220,6 +220,21 @@ export function MovieDetailModal({ movieId, open, onClose }: MovieDetailModalPro
               </p>
             </div>
 
+            {/* Movie Screenshot */}
+            {movie?.screenshot_url && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Movie Screenshot</p>
+                  <img 
+                    src={movie.screenshot_url} 
+                    alt="Movie Screenshot" 
+                    className="w-full rounded-lg shadow-lg"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Actions */}
             {!movie?.is_web_series && (
               <div className="flex gap-2">

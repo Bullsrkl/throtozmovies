@@ -101,6 +101,21 @@ export function PromotionRequests() {
       return;
     }
 
+    // Check if user has active subscription
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user!.id)
+      .eq("status", "active")
+      .eq("payment_verified", true)
+      .gte("expiry_date", new Date().toISOString())
+      .maybeSingle();
+
+    if (!subscription) {
+      toast.error("You need an active subscription to request promotions");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from("promotion_requests").insert({

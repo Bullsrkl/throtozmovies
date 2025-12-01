@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload as UploadIcon, X, Plus } from "lucide-react";
+import { Upload as UploadIcon, X, Plus, Image as ImageIcon } from "lucide-react";
 
 const CATEGORIES = [
   "South Hindi Dubbed",
@@ -33,10 +33,14 @@ export default function Upload() {
   const [loading, setLoading] = useState(false);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string>("");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string>("");
   const [isWebSeries, setIsWebSeries] = useState(false);
   const [episodes, setEpisodes] = useState<Episode[]>([
     { episode_number: 1, episode_title: "", episode_link: "" }
   ]);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -51,6 +55,26 @@ export default function Upload() {
     return null;
   }
 
+  // Check subscription on load
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .eq("payment_verified", true)
+        .gte("expiry_date", new Date().toISOString())
+        .maybeSingle();
+      
+      setHasActiveSubscription(!!data);
+      setCheckingSubscription(false);
+    };
+    checkSubscription();
+  }, [user]);
+
   const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -60,6 +84,18 @@ export default function Upload() {
       }
       setPosterFile(file);
       setPosterPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5242880) {
+        toast.error("Screenshot size must be less than 5MB");
+        return;
+      }
+      setScreenshotFile(file);
+      setScreenshotPreview(URL.createObjectURL(file));
     }
   };
 
@@ -136,6 +172,20 @@ export default function Upload() {
 
       const posterUrl = supabase.storage.from("movie-posters").getPublicUrl(fileName).data.publicUrl;
 
+      // Upload screenshot if provided
+      let screenshotUrl = null;
+      if (screenshotFile) {
+        const screenshotExt = screenshotFile.name.split(".").pop();
+        const screenshotName = `screenshot-${user.id}-${Date.now()}.${screenshotExt}`;
+        const { error: screenshotError } = await supabase.storage
+          .from("movie-posters")
+          .upload(screenshotName, screenshotFile);
+        
+        if (screenshotError) throw screenshotError;
+        
+        screenshotUrl = supabase.storage.from("movie-posters").getPublicUrl(screenshotName).data.publicUrl;
+      }
+
       // Insert movie
       const { data: movie, error: movieError } = await supabase
         .from("movies")
@@ -145,6 +195,7 @@ export default function Upload() {
           language: formData.language,
           description: formData.description,
           poster_url: posterUrl,
+          screenshot_url: screenshotUrl,
           direct_link: isWebSeries ? null : formData.direct_link,
           is_web_series: isWebSeries,
           uploader_id: user.id
@@ -178,6 +229,45 @@ export default function Upload() {
       setLoading(false);
     }
   };
+
+  // Show subscription required message if no active subscription
+  if (!hasActiveSubscription && !checkingSubscription) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="max-w-md mx-auto space-y-6">
+            <div className="text-6xl">🔒</div>
+            <h2 className="text-3xl font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
+              Subscription Required
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              You need an active subscription to upload movies and web series.
+            </p>
+            <Button 
+              onClick={() => navigate("/subscriptions")}
+              size="lg"
+              className="bg-gradient-to-r from-primary to-primary-light"
+            >
+              View Subscription Plans
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (checkingSubscription) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Checking subscription...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -219,6 +309,42 @@ export default function Upload() {
                     accept="image/*"
                     className="hidden"
                     onChange={handlePosterChange}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Movie Screenshot Upload */}
+          <div className="space-y-2">
+            <Label>Movie Scene Screenshot (Optional)</Label>
+            <p className="text-xs text-muted-foreground">Upload a screenshot from the movie scene</p>
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
+              {screenshotPreview ? (
+                <div className="relative inline-block">
+                  <img src={screenshotPreview} alt="Screenshot" className="max-h-48 rounded-lg" />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2"
+                    onClick={() => {
+                      setScreenshotFile(null);
+                      setScreenshotPreview("");
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="cursor-pointer">
+                  <ImageIcon className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-muted-foreground">Click to upload screenshot</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleScreenshotChange}
                   />
                 </label>
               )}
