@@ -19,7 +19,7 @@ interface PaymentPopupProps {
   userId: string;
 }
 
-const ADMIN_UPI = "tilaks631@paytm"; // Admin UPI ID
+const ADMIN_UPI = "bharat00070@ybl"; // Admin UPI ID
 const ADMIN_NAME = "Throtoz Movies";
 
 export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps) {

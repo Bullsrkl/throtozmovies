@@ -122,6 +122,7 @@ export type Database = {
           language: string
           poster_url: string
           promoted_until: string | null
+          screenshot_url: string | null
           shares: number | null
           title: string
           updated_at: string
@@ -142,6 +143,7 @@ export type Database = {
           language: string
           poster_url: string
           promoted_until?: string | null
+          screenshot_url?: string | null
           shares?: number | null
           title: string
           updated_at?: string
@@ -162,6 +164,7 @@ export type Database = {
           language?: string
           poster_url?: string
           promoted_until?: string | null
+          screenshot_url?: string | null
           shares?: number | null
           title?: string
           updated_at?: string
