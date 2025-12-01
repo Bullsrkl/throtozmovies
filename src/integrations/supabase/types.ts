@@ -189,6 +189,7 @@ export type Database = {
           full_name: string | null
           id: string
           updated_at: string
+          youtube_bonus_claimed: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -197,6 +198,7 @@ export type Database = {
           full_name?: string | null
           id: string
           updated_at?: string
+          youtube_bonus_claimed?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+          youtube_bonus_claimed?: boolean | null
         }
         Relationships: []
       }
@@ -214,7 +217,9 @@ export type Database = {
           duration_days: number
           id: string
           movie_id: string
+          payment_method: string | null
           processed_at: string | null
+          promotion_price: number | null
           requested_at: string
           status: string | null
           user_id: string
@@ -224,7 +229,9 @@ export type Database = {
           duration_days?: number
           id?: string
           movie_id: string
+          payment_method?: string | null
           processed_at?: string | null
+          promotion_price?: number | null
           requested_at?: string
           status?: string | null
           user_id: string
@@ -234,7 +241,9 @@ export type Database = {
           duration_days?: number
           id?: string
           movie_id?: string
+          payment_method?: string | null
           processed_at?: string | null
+          promotion_price?: number | null
           requested_at?: string
           status?: string | null
           user_id?: string
@@ -480,6 +489,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_wallet_bonus: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
