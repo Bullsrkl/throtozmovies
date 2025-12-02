@@ -183,29 +183,62 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auto_withdrawal: boolean | null
+          auto_withdrawal_threshold: number | null
           avatar_url: string | null
           created_at: string
+          default_category: string | null
+          default_language: string | null
           email: string
           full_name: string | null
           id: string
+          notify_downloads: boolean | null
+          notify_earnings: boolean | null
+          notify_promotions: boolean | null
+          notify_subscription: boolean | null
+          notify_withdrawals: boolean | null
+          primary_upi_id: string | null
+          secondary_upi_id: string | null
           updated_at: string
           youtube_bonus_claimed: boolean | null
         }
         Insert: {
+          auto_withdrawal?: boolean | null
+          auto_withdrawal_threshold?: number | null
           avatar_url?: string | null
           created_at?: string
+          default_category?: string | null
+          default_language?: string | null
           email: string
           full_name?: string | null
           id: string
+          notify_downloads?: boolean | null
+          notify_earnings?: boolean | null
+          notify_promotions?: boolean | null
+          notify_subscription?: boolean | null
+          notify_withdrawals?: boolean | null
+          primary_upi_id?: string | null
+          secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
         }
         Update: {
+          auto_withdrawal?: boolean | null
+          auto_withdrawal_threshold?: number | null
           avatar_url?: string | null
           created_at?: string
+          default_category?: string | null
+          default_language?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          notify_downloads?: boolean | null
+          notify_earnings?: boolean | null
+          notify_promotions?: boolean | null
+          notify_subscription?: boolean | null
+          notify_withdrawals?: boolean | null
+          primary_upi_id?: string | null
+          secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
         }
