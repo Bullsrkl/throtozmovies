@@ -8,6 +8,7 @@ import { Wallet } from "@/components/dashboard/Wallet";
 import { Analytics } from "@/components/dashboard/Analytics";
 import { SubscriptionManagement } from "@/components/dashboard/SubscriptionManagement";
 import { PromotionRequests } from "@/components/dashboard/PromotionRequests";
+import { Settings } from "@/components/dashboard/Settings";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
@@ -48,12 +49,7 @@ export default function Dashboard() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="subscription" element={<SubscriptionManagement />} />
             <Route path="promotions" element={<PromotionRequests />} />
-            <Route path="settings" element={
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-display font-bold mb-4">Settings</h2>
-                <p className="text-muted-foreground">Coming soon</p>
-              </div>
-            } />
+            <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
       </div>
