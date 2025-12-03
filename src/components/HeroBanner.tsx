@@ -118,10 +118,10 @@ export function HeroBanner() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               size="lg"
-              className="bg-gradient-to-r from-premium to-premium-light hover:opacity-90 shadow-elegant text-lg px-8 py-6 h-auto"
+              className="bg-gradient-to-r from-premium to-premium-light hover:opacity-90 shadow-elegant text-lg px-8 py-6 h-auto text-black"
               onClick={() => navigate("/auth")}
             >
-              <TrendingUp className="h-5 w-5 mr-2" />
+              <TrendingUp className="h-5 w-5 mr-2 text-black" />
               Start Earning Now
             </Button>
             <Button
