@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, Flame, Clock, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ interface Plan {
   plan_code: string;
   plan_name: string;
   price_inr: number;
+  original_price_inr: number | null;
   uploads_per_day: number;
   earning_per_download: number;
   withdrawal_min: number;
@@ -60,6 +61,16 @@ export default function Subscriptions() {
     setShowPayment(true);
   };
 
+  const getDiscountPercentage = (plan: Plan) => {
+    if (!plan.original_price_inr) return 0;
+    return Math.round(((plan.original_price_inr - plan.price_inr) / plan.original_price_inr) * 100);
+  };
+
+  const getSavings = (plan: Plan) => {
+    if (!plan.original_price_inr) return 0;
+    return plan.original_price_inr - plan.price_inr;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -80,6 +91,27 @@ export default function Subscriptions() {
       
       <section className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto space-y-8">
+          {/* Limited Time Offer Banner */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-destructive/90 via-orange-500 to-yellow-500 p-6 text-white shadow-lg">
+            <div className="relative flex flex-col md:flex-row items-center justify-center gap-4 text-center">
+              <div className="flex items-center gap-2">
+                <Flame className="h-8 w-8 animate-pulse" />
+                <span className="text-2xl md:text-3xl font-display font-bold">LIMITED TIME OFFER</span>
+                <Flame className="h-8 w-8 animate-pulse" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-white text-destructive text-lg px-4 py-2 font-bold animate-bounce">
+                  70% OFF
+                </Badge>
+                <span className="text-lg">on All Plans!</span>
+              </div>
+            </div>
+            <div className="relative flex items-center justify-center mt-2 gap-2 text-sm opacity-90">
+              <Clock className="h-4 w-4" />
+              <span>Hurry! Offer ends soon</span>
+            </div>
+          </div>
+
           {/* Header */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-5xl font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
@@ -92,7 +124,14 @@ export default function Subscriptions() {
 
           {/* Trial Plan */}
           {trialPlan && (
-            <Card className="border-2 border-premium shadow-elevated">
+            <Card className="relative border-2 border-premium shadow-elevated overflow-hidden">
+              {/* Limited Time Ribbon */}
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-gradient-to-r from-destructive to-orange-500 text-white px-3 py-1 text-sm font-bold flex items-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  {getDiscountPercentage(trialPlan)}% OFF
+                </Badge>
+              </div>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -103,11 +142,21 @@ export default function Subscriptions() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-3">
+                  {trialPlan.original_price_inr && (
+                    <span className="text-2xl text-muted-foreground line-through">
+                      ₹{trialPlan.original_price_inr}
+                    </span>
+                  )}
                   <span className="text-4xl font-bold bg-gradient-to-r from-premium to-premium-light bg-clip-text text-transparent">
                     ₹{trialPlan.price_inr}
                   </span>
                   <span className="text-muted-foreground">for 7 days</span>
+                  {getSavings(trialPlan) > 0 && (
+                    <Badge variant="outline" className="border-premium text-premium">
+                      Save ₹{getSavings(trialPlan)}
+                    </Badge>
+                  )}
                 </div>
                 
                 <ul className="space-y-3">
@@ -138,17 +187,46 @@ export default function Subscriptions() {
           {/* Regular Plans Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {regularPlans.map((plan) => (
-              <Card key={plan.id} className="shadow-card hover:shadow-elevated transition-shadow">
-                <CardHeader>
+              <Card key={plan.id} className="relative shadow-card hover:shadow-elevated transition-shadow overflow-hidden">
+                {/* Limited Time Badge */}
+                <div className="absolute top-0 left-0 right-0">
+                  <div className="bg-gradient-to-r from-destructive via-orange-500 to-yellow-500 text-white text-center py-1 text-xs font-bold flex items-center justify-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    LIMITED TIME OFFER
+                    <Sparkles className="h-3 w-3" />
+                  </div>
+                </div>
+                
+                {/* Discount Badge */}
+                <div className="absolute top-8 right-3">
+                  <Badge className="bg-gradient-to-r from-destructive to-orange-500 text-white px-2 py-1 text-xs font-bold flex items-center gap-1">
+                    <Flame className="h-3 w-3" />
+                    {getDiscountPercentage(plan)}% OFF
+                  </Badge>
+                </div>
+
+                <CardHeader className="pt-10">
                   <CardTitle className="text-xl font-display">{plan.plan_name}</CardTitle>
                   <CardDescription>{plan.plan_code}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                      ₹{plan.price_inr}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      {plan.original_price_inr && (
+                        <span className="text-xl text-muted-foreground line-through">
+                          ₹{plan.original_price_inr}
+                        </span>
+                      )}
+                      <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
+                        ₹{plan.price_inr}
+                      </span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    {getSavings(plan) > 0 && (
+                      <Badge variant="outline" className="border-green-500 text-green-600">
+                        You Save ₹{getSavings(plan)}
+                      </Badge>
+                    )}
                   </div>
                   
                   <ul className="space-y-2 text-sm">
@@ -197,7 +275,10 @@ export default function Subscriptions() {
         <PaymentPopup
           open={showPayment}
           onClose={() => setShowPayment(false)}
-          plan={selectedPlan}
+          plan={{
+            ...selectedPlan,
+            original_price_inr: selectedPlan.original_price_inr || undefined
+          }}
           userId={user.id}
         />
       )}
