@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Calendar, Upload, TrendingDown, ArrowUp } from "lucide-react";
+import { Crown, Calendar, Upload, TrendingDown, ArrowUp, Flame, Infinity, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { PaymentPopup } from "@/components/PaymentPopup";
+
+// Admin email - has lifetime access
+const ADMIN_EMAIL = "tilaks631@gmail.com";
 
 interface Subscription {
   id: string;
@@ -19,6 +22,7 @@ interface Subscription {
     plan_name: string;
     plan_code: string;
     price_inr: number;
+    original_price_inr: number | null;
     duration_days: number;
     uploads_per_day: number;
     earning_per_download: number;
@@ -32,6 +36,7 @@ interface Plan {
   plan_name: string;
   plan_code: string;
   price_inr: number;
+  original_price_inr: number | null;
   duration_days: number;
   uploads_per_day: number;
   earning_per_download: number;
@@ -48,6 +53,8 @@ export function SubscriptionManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [paymentPopupOpen, setPaymentPopupOpen] = useState(false);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   useEffect(() => {
     if (!user) return;
@@ -99,6 +106,16 @@ export function SubscriptionManagement() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
+  const getDiscountPercentage = (plan: Plan) => {
+    if (!plan.original_price_inr) return 0;
+    return Math.round(((plan.original_price_inr - plan.price_inr) / plan.original_price_inr) * 100);
+  };
+
+  const getSavings = (plan: Plan) => {
+    if (!plan.original_price_inr) return 0;
+    return plan.original_price_inr - plan.price_inr;
+  };
+
   const handleUpgrade = (plan: Plan) => {
     setSelectedPlan(plan);
     setPaymentPopupOpen(true);
@@ -106,6 +123,82 @@ export function SubscriptionManagement() {
 
   if (loading) {
     return <div className="text-center py-12">Loading subscription...</div>;
+  }
+
+  // Admin Lifetime Access Card
+  if (isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-display font-bold">Subscription Management</h2>
+          <p className="text-muted-foreground">Manage your plan and billing</p>
+        </div>
+
+        {/* Admin Lifetime Access Card */}
+        <Card className="shadow-elevated border-2 border-premium bg-gradient-to-r from-premium/10 via-yellow-500/10 to-premium-light/10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-premium/5 to-transparent pointer-events-none" />
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-gradient-to-r from-premium to-yellow-500">
+                  <Crown className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <span className="bg-gradient-to-r from-premium via-yellow-500 to-premium-light bg-clip-text text-transparent">
+                      Lifetime Premium Access
+                    </span>
+                    <Sparkles className="h-5 w-5 text-yellow-500" />
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">Admin Privileges</p>
+                </div>
+              </div>
+              <Badge className="bg-gradient-to-r from-premium to-yellow-500 text-white text-lg px-4 py-2">
+                <Infinity className="h-4 w-4 mr-1" />
+                LIFETIME
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+                <Calendar className="h-5 w-5 text-premium" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Validity</p>
+                  <p className="font-semibold text-premium">Forever ∞</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+                <Upload className="h-5 w-5 text-premium" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Daily Uploads</p>
+                  <p className="font-semibold text-premium">Unlimited</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+                <TrendingDown className="h-5 w-5 text-premium" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Per Download</p>
+                  <p className="font-semibold text-premium">Maximum Rate</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+                <ArrowUp className="h-5 w-5 text-premium" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Withdrawals</p>
+                  <p className="font-semibold text-premium">No Limits</p>
+                </div>
+              </div>
+            </div>
+            <div className="pt-4 border-t border-border text-center">
+              <p className="text-muted-foreground text-sm">
+                ✨ You have full admin access with all premium features enabled for life.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -216,15 +309,46 @@ export function SubscriptionManagement() {
                   !plan.plan_code.startsWith("TRIAL")
               )
               .map((plan) => (
-                <Card key={plan.id} className="shadow-card hover:border-premium/50 transition-all">
-                  <CardHeader>
+                <Card key={plan.id} className="relative shadow-card hover:border-premium/50 transition-all overflow-hidden">
+                  {/* Limited Time Banner */}
+                  {getDiscountPercentage(plan) > 0 && (
+                    <div className="absolute top-0 left-0 right-0">
+                      <div className="bg-gradient-to-r from-destructive via-orange-500 to-yellow-500 text-white text-center py-1 text-xs font-bold">
+                        🔥 LIMITED TIME OFFER
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Discount Badge */}
+                  {getDiscountPercentage(plan) > 0 && (
+                    <div className="absolute top-8 right-3">
+                      <Badge className="bg-gradient-to-r from-destructive to-orange-500 text-white px-2 py-1 text-xs font-bold flex items-center gap-1">
+                        <Flame className="h-3 w-3" />
+                        {getDiscountPercentage(plan)}% OFF
+                      </Badge>
+                    </div>
+                  )}
+
+                  <CardHeader className={getDiscountPercentage(plan) > 0 ? "pt-10" : ""}>
                     <CardTitle className="flex items-center gap-2">
                       <Crown className="h-5 w-5 text-premium" />
                       {plan.plan_name}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="text-3xl font-bold">₹{plan.price_inr}</div>
+                    <div className="space-y-1">
+                      {plan.original_price_inr && plan.original_price_inr > plan.price_inr && (
+                        <span className="text-lg text-muted-foreground line-through">
+                          ₹{plan.original_price_inr}
+                        </span>
+                      )}
+                      <div className="text-3xl font-bold">₹{plan.price_inr}</div>
+                      {getSavings(plan) > 0 && (
+                        <Badge variant="outline" className="border-green-500 text-green-600">
+                          Save ₹{getSavings(plan)}
+                        </Badge>
+                      )}
+                    </div>
                     <ul className="space-y-2 text-sm">
                       <li>✓ {plan.uploads_per_day} uploads/day</li>
                       <li>✓ ₹{plan.earning_per_download}/download</li>
@@ -298,6 +422,7 @@ export function SubscriptionManagement() {
             id: selectedPlan.id,
             plan_name: selectedPlan.plan_name,
             price_inr: selectedPlan.price_inr,
+            original_price_inr: selectedPlan.original_price_inr || undefined,
             uploads_per_day: selectedPlan.uploads_per_day,
             earning_per_download: selectedPlan.earning_per_download,
             duration_days: selectedPlan.duration_days,

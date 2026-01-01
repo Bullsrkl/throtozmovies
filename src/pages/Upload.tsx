@@ -19,6 +19,9 @@ const CATEGORIES = [
   "Web Series"
 ];
 
+// Admin email - bypasses subscription check
+const ADMIN_EMAIL = "tilaks631@gmail.com";
+
 const LANGUAGES = ["Hindi", "English", "Tamil", "Telugu", "Malayalam", "Kannada"];
 
 interface Episode {
@@ -55,10 +58,17 @@ export default function Upload() {
     return null;
   }
 
-  // Check subscription on load
+  // Check subscription on load - Admin bypasses this check
   useEffect(() => {
     const checkSubscription = async () => {
       if (!user) return;
+      
+      // Admin has lifetime access - bypass subscription check
+      if (user.email === ADMIN_EMAIL) {
+        setHasActiveSubscription(true);
+        setCheckingSubscription(false);
+        return;
+      }
       
       const { data } = await supabase
         .from("subscriptions")

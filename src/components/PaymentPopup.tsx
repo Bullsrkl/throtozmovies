@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, CheckCircle2, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, CheckCircle2, Loader2, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ interface PaymentPopupProps {
     id: string;
     plan_name: string;
     price_inr: number;
+    original_price_inr?: number;
     uploads_per_day: number;
     earning_per_download: number;
     duration_days: number;
@@ -27,6 +29,10 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
 
   const amount = plan.price_inr;
+  const originalAmount = plan.original_price_inr;
+  const savings = originalAmount ? originalAmount - amount : 0;
+  const discountPercent = originalAmount ? Math.round(((originalAmount - amount) / originalAmount) * 100) : 0;
+  
   const upiLink = `upi://pay?pa=${ADMIN_UPI}&pn=${encodeURIComponent(ADMIN_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Subscription ${plan.plan_name}`)}`;
 
   // Poll for payment verification
@@ -146,7 +152,15 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
             {/* Left: Plan Summary */}
             <div className="space-y-4">
               <div className="bg-background/50 rounded-xl p-6 border border-border/30 space-y-3">
-                <h4 className="font-display text-lg">{plan.plan_name}</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-display text-lg">{plan.plan_name}</h4>
+                  {discountPercent > 0 && (
+                    <Badge className="bg-gradient-to-r from-destructive to-orange-500 text-white flex items-center gap-1">
+                      <Flame className="h-3 w-3" />
+                      {discountPercent}% OFF
+                    </Badge>
+                  )}
+                </div>
                 <div className="space-y-2 text-sm">
                   <p className="flex justify-between">
                     <span className="text-muted-foreground">Uploads/Day:</span>
@@ -161,13 +175,26 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
                     <span className="font-medium">{plan.duration_days} days</span>
                   </p>
                 </div>
-                <div className="pt-4 border-t border-border/30">
+                <div className="pt-4 border-t border-border/30 space-y-2">
+                  {originalAmount && originalAmount > amount && (
+                    <p className="flex justify-between items-baseline">
+                      <span className="text-muted-foreground">Original Price:</span>
+                      <span className="text-lg text-muted-foreground line-through">
+                        ₹{originalAmount}
+                      </span>
+                    </p>
+                  )}
                   <p className="flex justify-between items-baseline">
                     <span className="text-muted-foreground">Total Amount:</span>
                     <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
                       ₹{amount}
                     </span>
                   </p>
+                  {savings > 0 && (
+                    <Badge variant="outline" className="border-green-500 text-green-600 w-fit">
+                      🎉 You Save ₹{savings}
+                    </Badge>
+                  )}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">

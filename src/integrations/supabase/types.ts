@@ -305,6 +305,7 @@ export type Database = {
           earning_per_download: number
           id: string
           is_trial: boolean | null
+          original_price_inr: number | null
           plan_code: string
           plan_name: string
           price_inr: number
@@ -319,6 +320,7 @@ export type Database = {
           earning_per_download: number
           id?: string
           is_trial?: boolean | null
+          original_price_inr?: number | null
           plan_code: string
           plan_name: string
           price_inr: number
@@ -333,6 +335,7 @@ export type Database = {
           earning_per_download?: number
           id?: string
           is_trial?: boolean | null
+          original_price_inr?: number | null
           plan_code?: string
           plan_name?: string
           price_inr?: number
