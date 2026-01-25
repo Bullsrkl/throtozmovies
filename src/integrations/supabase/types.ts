@@ -198,6 +198,7 @@ export type Database = {
           notify_subscription: boolean | null
           notify_withdrawals: boolean | null
           primary_upi_id: string | null
+          referral_code: string | null
           secondary_upi_id: string | null
           updated_at: string
           youtube_bonus_claimed: boolean | null
@@ -218,6 +219,7 @@ export type Database = {
           notify_subscription?: boolean | null
           notify_withdrawals?: boolean | null
           primary_upi_id?: string | null
+          referral_code?: string | null
           secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
@@ -238,6 +240,7 @@ export type Database = {
           notify_subscription?: boolean | null
           notify_withdrawals?: boolean | null
           primary_upi_id?: string | null
+          referral_code?: string | null
           secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
@@ -292,6 +295,54 @@ export type Database = {
           {
             foreignKeyName: "promotion_requests_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          signup_bonus_credited: boolean | null
+          status: string | null
+          subscription_bonus_credited: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          signup_bonus_credited?: boolean | null
+          status?: string | null
+          subscription_bonus_credited?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          signup_bonus_credited?: boolean | null
+          status?: string | null
+          subscription_bonus_credited?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -525,6 +576,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_referral_bonus: {
+        Args: {
+          p_bonus_type: string
+          p_referred_id: string
+          p_referrer_id: string
+        }
+        Returns: undefined
+      }
       credit_wallet_bonus: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
