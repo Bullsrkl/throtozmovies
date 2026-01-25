@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Gift, CheckCircle } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,15 +15,55 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [validReferral, setValidReferral] = useState<{id: string; email: string} | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (user) {
       navigate("/");
     }
-  }, [user, navigate]);
+    
+    // Check for referral code in URL
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setReferralCode(refCode);
+      setIsSignUp(true);
+      validateReferralCode(refCode);
+    }
+  }, [user, navigate, searchParams]);
+
+  const validateReferralCode = async (code: string) => {
+    if (!code || code.length < 6) {
+      setValidReferral(null);
+      return;
+    }
+    
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("referral_code", code.toUpperCase())
+      .maybeSingle();
+    
+    if (data && !error) {
+      setValidReferral(data);
+    } else {
+      setValidReferral(null);
+    }
+  };
+
+  const handleReferralCodeChange = (value: string) => {
+    const upperCode = value.toUpperCase();
+    setReferralCode(upperCode);
+    if (upperCode.length >= 6) {
+      validateReferralCode(upperCode);
+    } else {
+      setValidReferral(null);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -55,7 +96,7 @@ export default function Auth() {
         setIsForgotPassword(false);
       } else if (isSignUp) {
         const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -67,7 +108,34 @@ export default function Auth() {
         });
         
         if (error) throw error;
-        toast.success("Account created! Please check your email.");
+        
+        // If we have a valid referral and signup succeeded
+        if (signUpData.user && validReferral) {
+          // Create referral record and credit bonuses
+          const { error: refError } = await supabase
+            .from("referrals")
+            .insert({
+              referrer_id: validReferral.id,
+              referred_id: signUpData.user.id,
+              referral_code: referralCode,
+              status: "signup_bonus",
+              signup_bonus_credited: true
+            });
+          
+          if (!refError) {
+            // Credit signup bonus to both users
+            await supabase.rpc("credit_referral_bonus", {
+              p_referrer_id: validReferral.id,
+              p_referred_id: signUpData.user.id,
+              p_bonus_type: "signup"
+            });
+            toast.success("Account created with ₹25 referral bonus! Check your email.");
+          } else {
+            toast.success("Account created! Please check your email.");
+          }
+        } else {
+          toast.success("Account created! Please check your email.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -193,6 +261,39 @@ export default function Auth() {
                   minLength={6}
                   className="bg-card"
                 />
+              </div>
+            )}
+
+            {/* Referral Code Field - Only on Signup */}
+            {isSignUp && !isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="referralCode" className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-premium" />
+                  Referral Code (Optional)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="referralCode"
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => handleReferralCodeChange(e.target.value)}
+                    placeholder="THR..."
+                    className="bg-card font-mono uppercase"
+                    maxLength={9}
+                  />
+                  {validReferral && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                  )}
+                </div>
+                {validReferral && (
+                  <div className="text-xs text-green-500 flex items-center gap-1">
+                    <Gift className="h-3 w-3" />
+                    Valid code! You'll get ₹25 bonus on signup + ₹25 on first subscription
+                  </div>
+                )}
+                {referralCode.length >= 6 && !validReferral && (
+                  <p className="text-xs text-destructive">Invalid referral code</p>
+                )}
               </div>
             )}
 
