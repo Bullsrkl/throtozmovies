@@ -9,6 +9,7 @@ import { Analytics } from "@/components/dashboard/Analytics";
 import { SubscriptionManagement } from "@/components/dashboard/SubscriptionManagement";
 import { PromotionRequests } from "@/components/dashboard/PromotionRequests";
 import { Settings } from "@/components/dashboard/Settings";
+import { Referrals } from "@/components/dashboard/Referrals";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
@@ -49,6 +50,7 @@ export default function Dashboard() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="subscription" element={<SubscriptionManagement />} />
             <Route path="promotions" element={<PromotionRequests />} />
+            <Route path="referrals" element={<Referrals />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </main>

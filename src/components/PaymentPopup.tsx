@@ -46,7 +46,7 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
           .single();
 
         if (data?.payment_verified) {
-          // Credit ₹110 bonus to wallet
+          // Credit ₹110 subscription bonus to wallet
           try {
             await supabase.rpc('credit_wallet_bonus', {
               p_user_id: userId,
@@ -55,6 +55,27 @@ export function PaymentPopup({ open, onClose, plan, userId }: PaymentPopupProps)
             toast.success("Payment verified! ₹110 bonus credited to your wallet!");
           } catch (bonusError) {
             console.error("Error crediting bonus:", bonusError);
+          }
+
+          // Check if user was referred and credit subscription referral bonus
+          try {
+            const { data: referralData } = await supabase
+              .from("referrals")
+              .select("referrer_id, subscription_bonus_credited")
+              .eq("referred_id", userId)
+              .maybeSingle();
+
+            if (referralData && !referralData.subscription_bonus_credited) {
+              // Credit subscription referral bonus
+              await supabase.rpc("credit_referral_bonus", {
+                p_referrer_id: referralData.referrer_id,
+                p_referred_id: userId,
+                p_bonus_type: "subscription"
+              });
+              toast.success("Referral bonus credited! You got ₹25 extra!");
+            }
+          } catch (refError) {
+            console.error("Error crediting referral bonus:", refError);
           }
 
           setPaymentStatus("success");

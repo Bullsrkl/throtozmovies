@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: TrendingUp, label: "Analytics", path: "/dashboard/analytics" },
   { icon: Crown, label: "Subscription", path: "/dashboard/subscription" },
   { icon: Megaphone, label: "Promotions", path: "/dashboard/promotions" },
+  { icon: Users, label: "Referrals", path: "/dashboard/referrals" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
