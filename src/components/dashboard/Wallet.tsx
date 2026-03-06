@@ -43,6 +43,7 @@ export function Wallet() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [youtubeBonusClaimed, setYoutubeBonusClaimed] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
 
   const PLATFORM_FEE_PERCENT = 3;
 
@@ -51,7 +52,17 @@ export function Wallet() {
     fetchWalletData();
     fetchWithdrawals();
     fetchYoutubeStatus();
+    fetchYoutubeUrl();
   }, [user]);
+
+  const fetchYoutubeUrl = async () => {
+    const { data } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "youtube_channel_url")
+      .single();
+    if (data) setYoutubeUrl(data.value);
+  };
 
   const fetchYoutubeStatus = async () => {
     try {
