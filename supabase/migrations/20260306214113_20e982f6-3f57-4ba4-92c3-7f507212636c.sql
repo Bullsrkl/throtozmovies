@@ -1,0 +1,1 @@
+ALTER TABLE public.movies ADD COLUMN seo_keywords text NULL;
