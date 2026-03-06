@@ -479,6 +479,44 @@ export default function Upload() {
             </div>
           )}
 
+          {/* SEO Keywords */}
+          <div className="space-y-2">
+            <Label htmlFor="seo_keywords">SEO Keywords (Optional)</Label>
+            <Textarea
+              id="seo_keywords"
+              placeholder="action, thriller, hindi dubbed, 2024, blockbuster"
+              value={formData.seo_keywords}
+              onChange={(e) => setFormData({ ...formData, seo_keywords: e.target.value })}
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated keywords to help users find this content in search
+            </p>
+            {(formData.category || formData.language) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                <p className="text-xs text-muted-foreground w-full">Suggested:</p>
+                {getSuggestedKeywords(formData.category, formData.language).map((kw) => (
+                  <button
+                    key={kw}
+                    type="button"
+                    className="px-2 py-1 text-xs rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    onClick={() => {
+                      const existing = formData.seo_keywords.split(",").map(k => k.trim()).filter(Boolean);
+                      if (!existing.includes(kw)) {
+                        setFormData({
+                          ...formData,
+                          seo_keywords: existing.length ? `${formData.seo_keywords}, ${kw}` : kw
+                        });
+                      }
+                    }}
+                  >
+                    + {kw}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Submit */}
           <Button
             type="submit"
