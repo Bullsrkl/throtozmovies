@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone, Search } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone, Search, Youtube } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -95,6 +96,8 @@ export default function Admin() {
   const [promotionNotes, setPromotionNotes] = useState<{ [key: string]: string }>({});
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [movieSearchQuery, setMovieSearchQuery] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
   const [stats, setStats] = useState({ totalUsers: 0, totalMovies: 0, pendingPayments: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
@@ -107,8 +110,36 @@ export default function Admin() {
   useEffect(() => {
     if (user && isAdmin) {
       fetchData();
+      fetchPlatformSettings();
     }
   }, [user, isAdmin]);
+
+  const fetchPlatformSettings = async () => {
+    const { data } = await supabase
+      .from('platform_settings')
+      .select('value')
+      .eq('key', 'youtube_channel_url')
+      .single();
+    if (data) setYoutubeUrl(data.value);
+  };
+
+  const handleSaveYoutubeUrl = async () => {
+    if (!youtubeUrl.trim()) {
+      toast.error("Please enter a valid YouTube URL");
+      return;
+    }
+    setSavingSettings(true);
+    const { error } = await supabase
+      .from('platform_settings')
+      .upsert({ key: 'youtube_channel_url', value: youtubeUrl.trim(), updated_at: new Date().toISOString() });
+    
+    if (error) {
+      toast.error("Failed to save YouTube URL");
+    } else {
+      toast.success("YouTube channel URL updated!");
+    }
+    setSavingSettings(false);
+  };
 
   const fetchData = async () => {
     // Fetch pending subscriptions
@@ -477,6 +508,9 @@ export default function Admin() {
               <TabsTrigger value="promotions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
                 Promotion Requests
               </TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
+                Platform Settings
+              </TabsTrigger>
             </TabsList>
 
             {/* Payment Verification Tab */}
@@ -820,6 +854,41 @@ export default function Admin() {
                       ))}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            {/* Platform Settings Tab */}
+            <TabsContent value="settings">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Platform Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="youtube-url" className="text-base font-semibold flex items-center gap-2">
+                      <Youtube className="h-5 w-5 text-red-500" />
+                      YouTube Channel URL
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      This link will be used for the "Subscribe & Earn ₹100" feature shown to all users.
+                    </p>
+                    <div className="flex gap-3">
+                      <Input
+                        id="youtube-url"
+                        placeholder="https://youtube.com/@yourchannel"
+                        value={youtubeUrl}
+                        onChange={(e) => setYoutubeUrl(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveYoutubeUrl}
+                        disabled={savingSettings}
+                        className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground"
+                      >
+                        {savingSettings ? "Saving..." : "Done"}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

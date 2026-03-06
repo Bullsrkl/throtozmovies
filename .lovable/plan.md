@@ -1,45 +1,78 @@
 
 
-## Current YouTube Feature Analysis
+## Adsterra Ad Integration Plan
 
-### Abhi kya hai (Current State):
-- **Hardcoded YouTube links** in 2 files:
-  - `src/components/dashboard/Overview.tsx` (line 140-141)
-  - `src/components/dashboard/Wallet.tsx` (line 139-140)
-- Links hardcoded hain: `@throtozm` channel
-  - Deep link: `vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1`
-  - Web fallback: `https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1`
-- Admin ke paas **koi control nahi** hai link change karne ka — code edit karna padta hai
+### Ad Script Details
+```html
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+```
+
+This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
 
 ---
 
-## Proposed Plan: Admin-Controlled YouTube Link
+### Implementation Strategy
 
-### 1. Database: New `platform_settings` table
-| Column | Type | Purpose |
-|--------|------|---------|
-| `key` | text (PK) | Setting name (e.g., `youtube_channel_url`) |
-| `value` | text | The URL/link value |
-| `updated_at` | timestamp | Last update time |
+**Option 1: Global Script (Recommended)**
+Add the script to `index.html` so it loads on every page of the website.
 
-- RLS: Admin can read/write, all authenticated users can read
-- Insert default row: `youtube_channel_url` = current `@throtozm` link
+**Option 2: Component-Based**
+Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
 
-### 2. Admin Panel (`src/pages/Admin.tsx`)
-- New "Platform Settings" tab or section add karna
-- Input field for YouTube channel URL
-- "Done" / Save button — saves to `platform_settings` table
-- Admin enters any YouTube channel link, it becomes active for all users
+---
 
-### 3. User Side Updates
-- `Overview.tsx` and `Wallet.tsx` mein hardcoded links hata kar database se fetch karna
-- `platform_settings` table se `youtube_channel_url` read karke deep link + web fallback generate karna automatically
+### Recommended Approach: Global Integration
+
+**File to Modify:** `index.html`
+
+**Where to Add:**
+Place the script just before the closing `</body>` tag to ensure the page content loads first.
+
+```text
+Current Structure:
+┌──────────────────────────────┐
+│ <head>                       │
+│   ... meta tags, fonts ...   │
+│ </head>                      │
+│ <body>                       │
+│   <div id="root"></div>      │
+│   <script src="main.tsx">    │
+│   <!-- ADD ADSTERRA HERE --> │
+│ </body>                      │
+└──────────────────────────────┘
+```
+
+---
+
+### Technical Details
+
+**Changes to `index.html`:**
+Add the Adsterra script after the main app script:
+```html
+<script type="module" src="/src/main.tsx"></script>
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+```
+
+---
+
+### Expected Behavior
+
+Once integrated:
+- Social Bar will appear on every page (floating bar at bottom/side)
+- Or Popunder ad will trigger on first user click
+- Non-intrusive and won't block content
+- Automatic monetization with each impression
+
+---
 
 ### Files to Modify
+
 | File | Change |
 |------|--------|
-| Database | Create `platform_settings` table with default YouTube URL |
-| `src/pages/Admin.tsx` | Add YouTube link management section |
-| `src/components/dashboard/Overview.tsx` | Fetch YouTube URL from DB instead of hardcoded |
-| `src/components/dashboard/Wallet.tsx` | Same — fetch from DB |
+| `index.html` | Add Adsterra script before `</body>` |
+
+---
+
+### Timeline
+Single file change - instant deployment after implementation
 

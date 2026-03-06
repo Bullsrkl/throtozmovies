@@ -31,11 +31,22 @@ export function Overview() {
     youtubeBonusClaimed: false,
   });
   const [loading, setLoading] = useState(true);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
 
   useEffect(() => {
     if (!user) return;
     fetchStats();
+    fetchYoutubeUrl();
   }, [user]);
+
+  const fetchYoutubeUrl = async () => {
+    const { data } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "youtube_channel_url")
+      .single();
+    if (data) setYoutubeUrl(data.value);
+  };
 
   const fetchStats = async () => {
     try {
@@ -137,13 +148,17 @@ export function Overview() {
   };
 
   const openYouTubeChannel = () => {
-    const youtubeDeepLink = "vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1";
-    const webFallback = "https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1";
+    if (!youtubeUrl) return;
+    // Extract channel handle from URL for deep link
+    const url = new URL(youtubeUrl);
+    const channelPath = url.pathname;
+    const youtubeDeepLink = `vnd.youtube://www.youtube.com${channelPath}?sub_confirmation=1`;
     
     window.location.href = youtubeDeepLink;
     
     setTimeout(() => {
-      window.open(webFallback, '_blank');
+      const fallback = youtubeUrl.includes('sub_confirmation') ? youtubeUrl : `${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}sub_confirmation=1`;
+      window.open(fallback, '_blank');
     }, 500);
   };
 
