@@ -109,8 +109,36 @@ export default function Admin() {
   useEffect(() => {
     if (user && isAdmin) {
       fetchData();
+      fetchPlatformSettings();
     }
   }, [user, isAdmin]);
+
+  const fetchPlatformSettings = async () => {
+    const { data } = await supabase
+      .from('platform_settings')
+      .select('value')
+      .eq('key', 'youtube_channel_url')
+      .single();
+    if (data) setYoutubeUrl(data.value);
+  };
+
+  const handleSaveYoutubeUrl = async () => {
+    if (!youtubeUrl.trim()) {
+      toast.error("Please enter a valid YouTube URL");
+      return;
+    }
+    setSavingSettings(true);
+    const { error } = await supabase
+      .from('platform_settings')
+      .upsert({ key: 'youtube_channel_url', value: youtubeUrl.trim(), updated_at: new Date().toISOString() });
+    
+    if (error) {
+      toast.error("Failed to save YouTube URL");
+    } else {
+      toast.success("YouTube channel URL updated!");
+    }
+    setSavingSettings(false);
+  };
 
   const fetchData = async () => {
     // Fetch pending subscriptions
