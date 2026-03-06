@@ -95,6 +95,8 @@ export default function Admin() {
   const [promotionNotes, setPromotionNotes] = useState<{ [key: string]: string }>({});
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [movieSearchQuery, setMovieSearchQuery] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
   const [stats, setStats] = useState({ totalUsers: 0, totalMovies: 0, pendingPayments: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
