@@ -227,7 +227,8 @@ export default function Upload() {
           screenshot_url: screenshotUrl,
           direct_link: isWebSeries ? null : formData.direct_link,
           is_web_series: isWebSeries,
-          uploader_id: user.id
+          uploader_id: user.id,
+          seo_keywords: formData.seo_keywords || null
         })
         .select()
         .single();
