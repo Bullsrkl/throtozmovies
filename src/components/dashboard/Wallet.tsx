@@ -147,14 +147,21 @@ export function Wallet() {
   };
 
   const openYouTubeChannel = () => {
-    const youtubeDeepLink = "vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1";
-    const webFallback = "https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1";
-    
-    window.location.href = youtubeDeepLink;
-    
-    setTimeout(() => {
-      window.open(webFallback, '_blank');
-    }, 500);
+    if (!youtubeUrl) return;
+    try {
+      const url = new URL(youtubeUrl);
+      const channelPath = url.pathname;
+      const youtubeDeepLink = `vnd.youtube://www.youtube.com${channelPath}?sub_confirmation=1`;
+      
+      window.location.href = youtubeDeepLink;
+      
+      setTimeout(() => {
+        const fallback = youtubeUrl.includes('sub_confirmation') ? youtubeUrl : `${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}sub_confirmation=1`;
+        window.open(fallback, '_blank');
+      }, 500);
+    } catch {
+      window.open(youtubeUrl, '_blank');
+    }
   };
 
   const handleWithdrawalRequest = async (e: React.FormEvent) => {

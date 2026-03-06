@@ -148,13 +148,17 @@ export function Overview() {
   };
 
   const openYouTubeChannel = () => {
-    const youtubeDeepLink = "vnd.youtube://www.youtube.com/channel/@throtozm?sub_confirmation=1";
-    const webFallback = "https://youtube.com/@throtozm?si=OzLo_9frW1Dd1Rwv&sub_confirmation=1";
+    if (!youtubeUrl) return;
+    // Extract channel handle from URL for deep link
+    const url = new URL(youtubeUrl);
+    const channelPath = url.pathname;
+    const youtubeDeepLink = `vnd.youtube://www.youtube.com${channelPath}?sub_confirmation=1`;
     
     window.location.href = youtubeDeepLink;
     
     setTimeout(() => {
-      window.open(webFallback, '_blank');
+      const fallback = youtubeUrl.includes('sub_confirmation') ? youtubeUrl : `${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}sub_confirmation=1`;
+      window.open(fallback, '_blank');
     }, 500);
   };
 
