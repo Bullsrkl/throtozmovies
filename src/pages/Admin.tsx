@@ -507,6 +507,9 @@ export default function Admin() {
               <TabsTrigger value="promotions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
                 Promotion Requests
               </TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
+                Platform Settings
+              </TabsTrigger>
             </TabsList>
 
             {/* Payment Verification Tab */}
