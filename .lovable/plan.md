@@ -1,50 +1,78 @@
 
 
-## SEO Keywords Feature for Upload Form
+## Adsterra Ad Integration Plan
 
-### Problem
-Currently movies table mein koi keywords/tags field nahi hai. SEO keywords add karne se Google search mein content better rank karega aur users ko content dhundhne mein madad milegi.
-
-### Plan
-
-**1. Database Migration**
-- `movies` table mein `seo_keywords` column add karna (type: `text`, nullable)
-- Keywords comma-separated store honge (e.g., "action, thriller, hindi dubbed, 2024")
-
-**2. Upload Form Update (`src/pages/Upload.tsx`)**
-- Submit button ke upar ek "SEO Keywords" section add karna
-- Input field with placeholder showing example keywords
-- Helper text explaining how to add keywords (comma-separated)
-- Auto-suggest common keywords based on selected category/language
-- formData mein `seo_keywords` field add karna
-- Insert query mein `seo_keywords` include karna
-
-**3. SEO Meta Tags Integration**
-- Movie detail modal mein keywords ko meta description mein use karna for better search visibility
-- Index page pe movie cards mein keywords as hidden text for crawlers
-
-### UI Design
-```text
-┌─────────────────────────────────────┐
-│ SEO Keywords (Optional)             │
-│ ┌─────────────────────────────────┐ │
-│ │ action, thriller, hindi dubbed  │ │
-│ └─────────────────────────────────┘ │
-│ Add comma-separated keywords to     │
-│ help users find this content         │
-│                                     │
-│ Suggested: [Hindi Dubbed] [2024]    │
-│ [Action] [Thriller] (based on       │
-│ selected category)                  │
-└─────────────────────────────────────┘
+### Ad Script Details
+```html
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
 ```
 
+This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
+
+---
+
+### Implementation Strategy
+
+**Option 1: Global Script (Recommended)**
+Add the script to `index.html` so it loads on every page of the website.
+
+**Option 2: Component-Based**
+Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
+
+---
+
+### Recommended Approach: Global Integration
+
+**File to Modify:** `index.html`
+
+**Where to Add:**
+Place the script just before the closing `</body>` tag to ensure the page content loads first.
+
+```text
+Current Structure:
+┌──────────────────────────────┐
+│ <head>                       │
+│   ... meta tags, fonts ...   │
+│ </head>                      │
+│ <body>                       │
+│   <div id="root"></div>      │
+│   <script src="main.tsx">    │
+│   <!-- ADD ADSTERRA HERE --> │
+│ </body>                      │
+└──────────────────────────────┘
+```
+
+---
+
+### Technical Details
+
+**Changes to `index.html`:**
+Add the Adsterra script after the main app script:
+```html
+<script type="module" src="/src/main.tsx"></script>
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+```
+
+---
+
+### Expected Behavior
+
+Once integrated:
+- Social Bar will appear on every page (floating bar at bottom/side)
+- Or Popunder ad will trigger on first user click
+- Non-intrusive and won't block content
+- Automatic monetization with each impression
+
+---
+
 ### Files to Modify
+
 | File | Change |
 |------|--------|
-| Database | Add `seo_keywords text` column to `movies` table |
-| `src/pages/Upload.tsx` | Add SEO keywords input section with suggestions |
+| `index.html` | Add Adsterra script before `</body>` |
 
-### Lovable Cloud Error
-The backend authentication has expired and needs reconnection. This is separate from the feature - I'll handle the reconnection first.
+---
+
+### Timeline
+Single file change - instant deployment after implementation
 

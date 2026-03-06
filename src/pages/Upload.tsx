@@ -24,6 +24,24 @@ const ADMIN_EMAIL = "tilaks631@gmail.com";
 
 const LANGUAGES = ["Hindi", "English", "Tamil", "Telugu", "Malayalam", "Kannada"];
 
+const KEYWORD_SUGGESTIONS: Record<string, string[]> = {
+  "South Hindi Dubbed": ["south movie", "hindi dubbed", "action", "thriller", "mass", "2024", "2025"],
+  "Hollywood Hindi Dubbed": ["hollywood", "hindi dubbed", "english movie", "action", "sci-fi", "marvel", "2024", "2025"],
+  "Bollywood": ["bollywood", "hindi movie", "drama", "romance", "comedy", "2024", "2025"],
+  "Web Series": ["web series", "episodes", "season", "streaming", "thriller", "drama", "2024", "2025"],
+};
+
+function getSuggestedKeywords(category: string, language: string): string[] {
+  const suggestions = new Set<string>();
+  if (category && KEYWORD_SUGGESTIONS[category]) {
+    KEYWORD_SUGGESTIONS[category].forEach(k => suggestions.add(k));
+  }
+  if (language) suggestions.add(language.toLowerCase());
+  suggestions.add("throtoz");
+  suggestions.add("free download");
+  return Array.from(suggestions);
+}
+
 interface Episode {
   episode_number: number;
   episode_title: string;
@@ -50,7 +68,8 @@ export default function Upload() {
     category: "",
     language: "",
     description: "",
-    direct_link: ""
+    direct_link: "",
+    seo_keywords: ""
   });
 
   if (!user) {
@@ -208,7 +227,8 @@ export default function Upload() {
           screenshot_url: screenshotUrl,
           direct_link: isWebSeries ? null : formData.direct_link,
           is_web_series: isWebSeries,
-          uploader_id: user.id
+          uploader_id: user.id,
+          seo_keywords: formData.seo_keywords || null
         })
         .select()
         .single();
@@ -477,6 +497,44 @@ export default function Upload() {
               </div>
             </div>
           )}
+
+          {/* SEO Keywords */}
+          <div className="space-y-2">
+            <Label htmlFor="seo_keywords">SEO Keywords (Optional)</Label>
+            <Textarea
+              id="seo_keywords"
+              placeholder="action, thriller, hindi dubbed, 2024, blockbuster"
+              value={formData.seo_keywords}
+              onChange={(e) => setFormData({ ...formData, seo_keywords: e.target.value })}
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated keywords to help users find this content in search
+            </p>
+            {(formData.category || formData.language) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                <p className="text-xs text-muted-foreground w-full">Suggested:</p>
+                {getSuggestedKeywords(formData.category, formData.language).map((kw) => (
+                  <button
+                    key={kw}
+                    type="button"
+                    className="px-2 py-1 text-xs rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    onClick={() => {
+                      const existing = formData.seo_keywords.split(",").map(k => k.trim()).filter(Boolean);
+                      if (!existing.includes(kw)) {
+                        setFormData({
+                          ...formData,
+                          seo_keywords: existing.length ? `${formData.seo_keywords}, ${kw}` : kw
+                        });
+                      }
+                    }}
+                  >
+                    + {kw}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Submit */}
           <Button
