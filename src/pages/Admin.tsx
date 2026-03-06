@@ -856,6 +856,41 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </TabsContent>
+            {/* Platform Settings Tab */}
+            <TabsContent value="settings">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Platform Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="youtube-url" className="text-base font-semibold flex items-center gap-2">
+                      <Youtube className="h-5 w-5 text-red-500" />
+                      YouTube Channel URL
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      This link will be used for the "Subscribe & Earn ₹100" feature shown to all users.
+                    </p>
+                    <div className="flex gap-3">
+                      <Input
+                        id="youtube-url"
+                        placeholder="https://youtube.com/@yourchannel"
+                        value={youtubeUrl}
+                        onChange={(e) => setYoutubeUrl(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveYoutubeUrl}
+                        disabled={savingSettings}
+                        className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground"
+                      >
+                        {savingSettings ? "Saving..." : "Done"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
