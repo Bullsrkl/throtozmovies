@@ -31,11 +31,22 @@ export function Overview() {
     youtubeBonusClaimed: false,
   });
   const [loading, setLoading] = useState(true);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
 
   useEffect(() => {
     if (!user) return;
     fetchStats();
+    fetchYoutubeUrl();
   }, [user]);
+
+  const fetchYoutubeUrl = async () => {
+    const { data } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "youtube_channel_url")
+      .single();
+    if (data) setYoutubeUrl(data.value);
+  };
 
   const fetchStats = async () => {
     try {
