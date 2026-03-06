@@ -50,7 +50,8 @@ export default function Upload() {
     category: "",
     language: "",
     description: "",
-    direct_link: ""
+    direct_link: "",
+    seo_keywords: ""
   });
 
   if (!user) {
