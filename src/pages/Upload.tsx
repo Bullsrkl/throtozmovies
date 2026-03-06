@@ -24,6 +24,24 @@ const ADMIN_EMAIL = "tilaks631@gmail.com";
 
 const LANGUAGES = ["Hindi", "English", "Tamil", "Telugu", "Malayalam", "Kannada"];
 
+const KEYWORD_SUGGESTIONS: Record<string, string[]> = {
+  "South Hindi Dubbed": ["south movie", "hindi dubbed", "action", "thriller", "mass", "2024", "2025"],
+  "Hollywood Hindi Dubbed": ["hollywood", "hindi dubbed", "english movie", "action", "sci-fi", "marvel", "2024", "2025"],
+  "Bollywood": ["bollywood", "hindi movie", "drama", "romance", "comedy", "2024", "2025"],
+  "Web Series": ["web series", "episodes", "season", "streaming", "thriller", "drama", "2024", "2025"],
+};
+
+function getSuggestedKeywords(category: string, language: string): string[] {
+  const suggestions = new Set<string>();
+  if (category && KEYWORD_SUGGESTIONS[category]) {
+    KEYWORD_SUGGESTIONS[category].forEach(k => suggestions.add(k));
+  }
+  if (language) suggestions.add(language.toLowerCase());
+  suggestions.add("throtoz");
+  suggestions.add("free download");
+  return Array.from(suggestions);
+}
+
 interface Episode {
   episode_number: number;
   episode_title: string;
