@@ -5,100 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Users, FileText, Wallet, TrendingUp, CheckCircle, XCircle, Trash2, Crown, UserCog, Megaphone, Search, Youtube } from "lucide-react";
+import { Users, Wallet, TrendingUp, CheckCircle, XCircle, Crown, Search, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Subscription {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  status: string;
-  payment_verified: boolean;
-  payment_receipt_url: string | null;
-  start_date: string;
-  expiry_date: string;
-  profiles: { email: string; full_name: string | null };
-  subscription_plans: { plan_name: string; price_inr: number };
-}
-
-interface Withdrawal {
-  id: string;
-  user_id: string;
-  amount: number;
-  net_amount: number;
-  platform_fee: number;
-  upi_id: string;
-  status: string;
-  requested_at: string;
-  profiles: { email: string; full_name: string | null };
-}
-
-interface Movie {
-  id: string;
-  title: string;
-  uploader_id: string;
-  views: number;
-  downloads: number;
-  clicks: number;
-  impressions: number;
-  is_promoted: boolean;
-  promoted_until: string | null;
-  created_at: string;
-  profiles: { email: string; full_name: string | null };
-}
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  created_at: string;
-  subscription?: {
-    status: string;
-    subscription_plans: { plan_name: string };
-  } | null;
-  wallets?: { balance: number }[];
-  movies?: { id: string }[];
-}
-
-interface PromotionRequest {
-  id: string;
-  user_id: string;
-  movie_id: string;
-  duration_days: number;
-  status: string;
-  requested_at: string;
-  admin_notes: string | null;
-  profiles: {
-    email: string;
-    full_name: string | null;
-  };
-  movies: {
-    id: string;
-    title: string;
-    poster_url: string;
-  };
-}
-
 export default function Admin() {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [promotionRequests, setPromotionRequests] = useState<PromotionRequest[]>([]);
-  const [promotionNotes, setPromotionNotes] = useState<{ [key: string]: string }>({});
-  const [userSearchQuery, setUserSearchQuery] = useState("");
-  const [movieSearchQuery, setMovieSearchQuery] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [usdtAddress, setUsdtAddress] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
-  const [stats, setStats] = useState({ totalUsers: 0, totalMovies: 0, pendingPayments: 0, pendingWithdrawals: 0 });
+  const [stats, setStats] = useState({ totalUsers: 0, pendingPayments: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -110,790 +34,314 @@ export default function Admin() {
   useEffect(() => {
     if (user && isAdmin) {
       fetchData();
-      fetchPlatformSettings();
+      fetchSettings();
     }
   }, [user, isAdmin]);
 
-  const fetchPlatformSettings = async () => {
-    const { data } = await supabase
-      .from('platform_settings')
-      .select('value')
-      .eq('key', 'youtube_channel_url')
-      .single();
-    if (data) setYoutubeUrl(data.value);
-  };
-
-  const handleSaveYoutubeUrl = async () => {
-    if (!youtubeUrl.trim()) {
-      toast.error("Please enter a valid YouTube URL");
-      return;
-    }
-    setSavingSettings(true);
-    const { error } = await supabase
-      .from('platform_settings')
-      .upsert({ key: 'youtube_channel_url', value: youtubeUrl.trim(), updated_at: new Date().toISOString() });
-    
-    if (error) {
-      toast.error("Failed to save YouTube URL");
-    } else {
-      toast.success("YouTube channel URL updated!");
-    }
-    setSavingSettings(false);
+  const fetchSettings = async () => {
+    const { data } = await supabase.from("platform_settings").select("value").eq("key", "usdt_deposit_address").single();
+    if (data) setUsdtAddress(data.value);
   };
 
   const fetchData = async () => {
-    // Fetch pending subscriptions
-    const { data: subData } = await supabase
-      .from('subscriptions')
-      .select('*, profiles(email, full_name), subscription_plans(plan_name, price_inr)')
-      .eq('payment_verified', false)
-      .order('start_date', { ascending: false });
-    
-    if (subData) setSubscriptions(subData as any);
+    // Pending challenge purchases
+    const { data: purchaseData } = await supabase
+      .from("challenge_purchases")
+      .select("*, profiles(email, full_name), challenge_plans(account_size, challenge_type, price_usd)")
+      .eq("status", "payment_submitted")
+      .order("created_at", { ascending: false });
+    setPurchases(purchaseData || []);
 
-    // Fetch pending withdrawals
+    // Pending withdrawals
     const { data: withdrawalData } = await supabase
-      .from('withdrawals')
-      .select('*, profiles(email, full_name)')
-      .eq('status', 'pending')
-      .order('requested_at', { ascending: false });
-    
-    if (withdrawalData) setWithdrawals(withdrawalData as any);
+      .from("withdrawals")
+      .select("*, profiles(email, full_name)")
+      .eq("status", "pending")
+      .order("requested_at", { ascending: false });
+    setWithdrawals(withdrawalData || []);
 
-    // Fetch movies
-    const { data: movieData } = await supabase
-      .from('movies')
-      .select('*, profiles(email, full_name)')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    
-    if (movieData) setMovies(movieData as any);
-
-    // Fetch all users with detailed data (left join to include users without subscriptions)
+    // Users
     const { data: userData } = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        subscriptions(status, subscription_plans(plan_name)),
-        wallets(balance),
-        movies(id)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (userData) {
-      // Transform data to get latest subscription
-      const transformedUsers = userData.map((user: any) => ({
-        ...user,
-        subscription: Array.isArray(user.subscriptions) ? user.subscriptions[0] : null,
-        wallets: user.wallets || [],
-        movies: user.movies || []
-      }));
-      setUsers(transformedUsers);
-    }
+      .from("profiles")
+      .select("*, wallets(balance), trading_accounts(id)")
+      .order("created_at", { ascending: false });
+    setUsers(userData || []);
 
-    // Fetch promotion requests
-    const { data: promoData } = await supabase
-      .from('promotion_requests')
-      .select('*, profiles(email, full_name), movies(id, title, poster_url)')
-      .eq('status', 'pending')
-      .order('requested_at', { ascending: false });
-    
-    if (promoData) setPromotionRequests(promoData as any);
+    const { count: userCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
 
-    // Fetch stats
-    const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-    const { count: movieCount } = await supabase.from('movies').select('*', { count: 'exact', head: true });
-    
     setStats({
       totalUsers: userCount || 0,
-      totalMovies: movieCount || 0,
-      pendingPayments: subData?.length || 0,
-      pendingWithdrawals: withdrawalData?.length || 0
+      pendingPayments: purchaseData?.length || 0,
+      pendingWithdrawals: withdrawalData?.length || 0,
     });
   };
 
-  const handleApprovePayment = async (subscriptionId: string, expiryDate: string) => {
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ payment_verified: true, status: 'active' })
-      .eq('id', subscriptionId);
+  const handleApprovePurchase = async (purchaseId: string, userId: string, planData: any) => {
+    // Generate trading account
+    const accountNumber = Math.floor(100000000 + Math.random() * 900000000).toString();
+    const password = Math.random().toString(36).slice(-8);
 
-    if (error) {
-      toast.error("Failed to approve payment");
-    } else {
-      toast.success("Payment approved!");
-      fetchData();
-    }
-  };
+    const { error: accountError } = await supabase.from("trading_accounts").insert({
+      user_id: userId,
+      purchase_id: purchaseId,
+      account_number: accountNumber,
+      password: password,
+      balance: planData.account_size,
+      profit_target: planData.challenge_type === "two_step" ? 8 : planData.challenge_type === "one_step" ? 10 : 0,
+      phase: planData.challenge_type === "instant" ? "master" : "phase1",
+      status: planData.challenge_type === "instant" ? "funded" : "active",
+    });
 
-  const handleRejectPayment = async (subscriptionId: string) => {
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ status: 'cancelled' })
-      .eq('id', subscriptionId);
-
-    if (error) {
-      toast.error("Failed to reject payment");
-    } else {
-      toast.error("Payment rejected");
-      fetchData();
-    }
-  };
-
-  const handleApproveWithdrawal = async (withdrawalId: string, upiId: string, amount: number) => {
-    // Open UPI deep link
-    const upiLink = `upi://pay?pa=${upiId}&pn=Creator&am=${amount}&cu=INR`;
-    window.open(upiLink, '_blank');
-
-    toast.success(`UPI payment link opened for ₹${amount}. Mark as paid after transfer.`);
-  };
-
-  const handleCompleteWithdrawal = async (withdrawalId: string) => {
-    // Get withdrawal details
-    const withdrawal = withdrawals.find(w => w.id === withdrawalId);
-    if (!withdrawal) return;
-
-    // Update withdrawal status
-    const { error: withdrawalError } = await supabase
-      .from('withdrawals')
-      .update({ status: 'paid', processed_at: new Date().toISOString() })
-      .eq('id', withdrawalId);
-
-    if (withdrawalError) {
-      toast.error("Failed to complete withdrawal");
+    if (accountError) {
+      toast.error("Failed to create trading account");
       return;
     }
 
-    // Update user wallet - deduct amount and update total_withdrawn
-    const { data: walletData } = await supabase
-      .from('wallets')
-      .select('balance, total_withdrawn')
-      .eq('user_id', withdrawal.user_id)
-      .single();
+    await supabase.from("challenge_purchases").update({ status: "approved" }).eq("id", purchaseId);
+    toast.success(`Trading account #${accountNumber} created!`);
+    fetchData();
+  };
 
+  const handleRejectPurchase = async (purchaseId: string) => {
+    await supabase.from("challenge_purchases").update({ status: "rejected" }).eq("id", purchaseId);
+    toast.error("Purchase rejected");
+    fetchData();
+  };
+
+  const handleApproveWithdrawal = async (withdrawalId: string) => {
+    const withdrawal = withdrawals.find((w: any) => w.id === withdrawalId);
+    if (!withdrawal) return;
+
+    await supabase.from("withdrawals").update({ status: "paid", processed_at: new Date().toISOString() }).eq("id", withdrawalId);
+
+    const { data: walletData } = await supabase.from("wallets").select("balance, total_withdrawn").eq("user_id", withdrawal.user_id).single();
     if (walletData) {
-      const { error: walletError } = await supabase
-        .from('wallets')
-        .update({
-          balance: walletData.balance - withdrawal.amount,
-          total_withdrawn: (walletData.total_withdrawn || 0) + withdrawal.net_amount
-        })
-        .eq('user_id', withdrawal.user_id);
-
-      if (walletError) {
-        toast.error("Failed to update wallet");
-        return;
-      }
+      await supabase.from("wallets").update({
+        balance: walletData.balance - withdrawal.amount,
+        total_withdrawn: (walletData.total_withdrawn || 0) + withdrawal.net_amount,
+      }).eq("user_id", withdrawal.user_id);
     }
 
-    toast.success("Withdrawal completed and wallet updated!");
+    toast.success("Withdrawal approved!");
     fetchData();
   };
 
   const handleRejectWithdrawal = async (withdrawalId: string) => {
-    const { error } = await supabase
-      .from('withdrawals')
-      .update({ status: 'rejected' })
-      .eq('id', withdrawalId);
-
-    if (error) {
-      toast.error("Failed to reject withdrawal");
-    } else {
-      toast.error("Withdrawal rejected");
-      fetchData();
-    }
+    await supabase.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
+    toast.error("Withdrawal rejected");
+    fetchData();
   };
 
-  const handleDeleteMovie = async (movieId: string) => {
-    if (!confirm("Are you sure you want to delete this movie?")) return;
-
-    const { error } = await supabase
-      .from('movies')
-      .delete()
-      .eq('id', movieId);
-
-    if (error) {
-      toast.error("Failed to delete movie");
-    } else {
-      toast.success("Movie deleted");
-      fetchData();
-    }
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    await supabase.from("platform_settings").upsert({ key: "usdt_deposit_address", value: usdtAddress, updated_at: new Date().toISOString() });
+    toast.success("Settings saved!");
+    setSavingSettings(false);
   };
 
-  const handleApprovePromotion = async (requestId: string, movieId: string, durationDays: number) => {
-    const notes = promotionNotes[requestId] || "";
-    
-    // Calculate promoted_until date
-    const promotedUntil = new Date();
-    promotedUntil.setDate(promotedUntil.getDate() + durationDays);
-
-    // Update movie promotion
-    const { error: movieError } = await supabase
-      .from('movies')
-      .update({
-        is_promoted: true,
-        promoted_until: promotedUntil.toISOString()
-      })
-      .eq('id', movieId);
-
-    if (movieError) {
-      toast.error("Failed to promote movie");
-      return;
-    }
-
-    // Update promotion request
-    const { error: requestError } = await supabase
-      .from('promotion_requests')
-      .update({
-        status: 'approved',
-        processed_at: new Date().toISOString(),
-        admin_notes: notes
-      })
-      .eq('id', requestId);
-
-    if (requestError) {
-      toast.error("Failed to update request");
-    } else {
-      toast.success("Promotion approved!");
-      fetchData();
-    }
-  };
-
-  const handleRejectPromotion = async (requestId: string) => {
-    const notes = promotionNotes[requestId] || "";
-
-    const { error } = await supabase
-      .from('promotion_requests')
-      .update({
-        status: 'rejected',
-        processed_at: new Date().toISOString(),
-        admin_notes: notes
-      })
-      .eq('id', requestId);
-
-    if (error) {
-      toast.error("Failed to reject promotion");
-    } else {
-      toast.error("Promotion request rejected");
-      fetchData();
-    }
-  };
-
-  const handleInstantPromote = async (movieId: string) => {
-    const days = prompt("Enter promotion duration (in days):", "7");
-    if (!days) return;
-
-    const durationDays = parseInt(days);
-    if (isNaN(durationDays) || durationDays <= 0) {
-      toast.error("Invalid duration");
-      return;
-    }
-
-    const promotedUntil = new Date();
-    promotedUntil.setDate(promotedUntil.getDate() + durationDays);
-
-    const { error } = await supabase
-      .from('movies')
-      .update({
-        is_promoted: true,
-        promoted_until: promotedUntil.toISOString()
-      })
-      .eq('id', movieId);
-
-    if (error) {
-      toast.error("Failed to promote movie");
-    } else {
-      toast.success(`Movie promoted for ${durationDays} days!`);
-      fetchData();
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-12">
-          <div className="text-center">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
+  if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-12 text-center">Loading...</div></div>;
   if (!user || !isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Header with golden theme */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-admin to-admin-light bg-clip-text text-transparent">
-                  Admin Dashboard
-                </h1>
-                <Badge className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground">
-                  <Crown className="h-3 w-3 mr-1" />
-                  Administrator
-                </Badge>
-              </div>
-              <p className="text-muted-foreground mt-1">Manage platform operations</p>
-            </div>
-          </div>
-
-          {/* Stats Grid - Golden Theme */}
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card className="shadow-card border-admin/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-admin" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-admin">{stats.totalUsers}</div>
-                <p className="text-xs text-muted-foreground">Registered users</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card border-admin/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Movies</CardTitle>
-                <FileText className="h-4 w-4 text-admin" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-admin">{stats.totalMovies}</div>
-                <p className="text-xs text-muted-foreground">Uploaded content</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card border-admin/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                <TrendingUp className="h-4 w-4 text-admin" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-admin">{stats.pendingPayments}</div>
-                <p className="text-xs text-muted-foreground">Awaiting verification</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card border-admin/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Pending Withdrawals</CardTitle>
-                <Wallet className="h-4 w-4 text-admin" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-admin">{stats.pendingWithdrawals}</div>
-                <p className="text-xs text-muted-foreground">Saturday payouts</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Management Tabs */}
-          <Tabs defaultValue="payments" className="space-y-6">
-            <TabsList className="bg-card border border-admin/20">
-              <TabsTrigger value="payments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                Payment Verification
-              </TabsTrigger>
-              <TabsTrigger value="withdrawals" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                Withdrawal Requests
-              </TabsTrigger>
-              <TabsTrigger value="movies" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                Movie Management
-              </TabsTrigger>
-              <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                User Management
-              </TabsTrigger>
-              <TabsTrigger value="promotions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                Promotion Requests
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">
-                Platform Settings
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Payment Verification Tab */}
-            <TabsContent value="payments">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle>Pending Payment Verifications</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {subscriptions.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No pending payments</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User</TableHead>
-                          <TableHead>Plan</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Receipt</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subscriptions.map((sub) => (
-                          <TableRow key={sub.id}>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{sub.profiles.full_name || 'N/A'}</div>
-                                <div className="text-xs text-muted-foreground">{sub.profiles.email}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{sub.subscription_plans.plan_name}</TableCell>
-                            <TableCell className="font-semibold">₹{sub.subscription_plans.price_inr}</TableCell>
-                            <TableCell className="text-sm">{new Date(sub.start_date).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              {sub.payment_receipt_url ? (
-                                <a href={sub.payment_receipt_url} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="outline" size="sm">View</Button>
-                                </a>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">No receipt</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button size="sm" className="bg-gradient-to-r from-premium to-premium-light" onClick={() => handleApprovePayment(sub.id, sub.expiry_date)}>
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleRejectPayment(sub.id)}>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Withdrawal Requests Tab */}
-            <TabsContent value="withdrawals">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle>Pending Withdrawal Requests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {withdrawals.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No pending withdrawals</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Platform Fee (3%)</TableHead>
-                          <TableHead>Net Amount</TableHead>
-                          <TableHead>UPI ID</TableHead>
-                          <TableHead>Requested</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {withdrawals.map((withdrawal) => (
-                          <TableRow key={withdrawal.id}>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{withdrawal.profiles.full_name || 'N/A'}</div>
-                                <div className="text-xs text-muted-foreground">{withdrawal.profiles.email}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-semibold">₹{withdrawal.amount}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">₹{withdrawal.platform_fee}</TableCell>
-                            <TableCell className="font-bold text-admin">₹{withdrawal.net_amount}</TableCell>
-                            <TableCell className="font-mono text-sm">{withdrawal.upi_id}</TableCell>
-                            <TableCell className="text-sm">{new Date(withdrawal.requested_at).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button size="sm" className="bg-gradient-to-r from-admin to-admin-light" onClick={() => handleApproveWithdrawal(withdrawal.id, withdrawal.upi_id, withdrawal.net_amount)}>
-                                  Pay via UPI
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleCompleteWithdrawal(withdrawal.id)}>
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Mark Paid
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleRejectWithdrawal(withdrawal.id)}>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Movie Management Tab */}
-            <TabsContent value="movies">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>All Movies ({movies.length})</CardTitle>
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by title..."
-                        value={movieSearchQuery}
-                        onChange={(e) => setMovieSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {movies.filter(m => m.title.toLowerCase().includes(movieSearchQuery.toLowerCase())).length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No movies found</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Uploader</TableHead>
-                            <TableHead>Impressions</TableHead>
-                            <TableHead>Clicks</TableHead>
-                            <TableHead>Downloads</TableHead>
-                            <TableHead>CTR %</TableHead>
-                            <TableHead>Promoted</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {movies
-                            .filter(m => m.title.toLowerCase().includes(movieSearchQuery.toLowerCase()))
-                            .map((movie) => {
-                              const ctr = movie.impressions > 0 
-                                ? ((movie.clicks || 0) / movie.impressions * 100).toFixed(2)
-                                : '0.00';
-                              const isPromoted = movie.is_promoted && movie.promoted_until && new Date(movie.promoted_until) > new Date();
-                              
-                              return (
-                                <TableRow key={movie.id}>
-                                  <TableCell className="font-medium">{movie.title}</TableCell>
-                                  <TableCell>
-                                    <div>
-                                      <div className="text-sm">{movie.profiles.full_name || 'N/A'}</div>
-                                      <div className="text-xs text-muted-foreground">{movie.profiles.email}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>{movie.impressions || 0}</TableCell>
-                                  <TableCell>{movie.clicks || 0}</TableCell>
-                                  <TableCell>{movie.downloads || 0}</TableCell>
-                                  <TableCell className="font-semibold">{ctr}%</TableCell>
-                                  <TableCell>
-                                    {isPromoted ? (
-                                      <Badge className="bg-premium text-premium-foreground">
-                                        Active
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline">No</Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        className="border-admin/30"
-                                        onClick={() => handleInstantPromote(movie.id)}
-                                      >
-                                        <Megaphone className="h-3 w-3 mr-1" />
-                                        Promote
-                                      </Button>
-                                      <Button size="sm" variant="destructive" onClick={() => handleDeleteMovie(movie.id)}>
-                                        <Trash2 className="h-3 w-3 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* User Management Tab */}
-            <TabsContent value="users">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <UserCog className="h-5 w-5" />
-                      All Users ({users.length})
-                    </CardTitle>
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by email..."
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {users.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No users found</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Full Name</TableHead>
-                            <TableHead>Subscription</TableHead>
-                            <TableHead>Wallet Balance</TableHead>
-                            <TableHead>Uploads</TableHead>
-                            <TableHead>Registered</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {users
-                            .filter((user) =>
-                              userSearchQuery
-                                ? user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-                                  (user.full_name && user.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()))
-                                : true
-                            )
-                            .map((user) => (
-                              <TableRow key={user.id}>
-                                <TableCell className="font-medium">{user.email}</TableCell>
-                                <TableCell>{user.full_name || 'N/A'}</TableCell>
-                                <TableCell>
-                                  {user.subscription ? (
-                                    <Badge className="bg-premium text-premium-foreground">
-                                      {user.subscription.subscription_plans.plan_name}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline">No Plan</Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell className="font-semibold">
-                                  ₹{user.wallets && user.wallets[0] ? user.wallets[0].balance.toFixed(2) : '0.00'}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{user.movies ? user.movies.length : 0}</Badge>
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {new Date(user.created_at).toLocaleDateString('en-IN')}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Promotion Requests Tab */}
-            <TabsContent value="promotions">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Megaphone className="h-5 w-5" />
-                    Pending Promotion Requests
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {promotionRequests.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No pending promotion requests</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {promotionRequests.map((request) => (
-                        <div key={request.id} className="border border-border rounded-lg p-4">
-                          <div className="flex gap-4">
-                            <img src={request.movies.poster_url} alt={request.movies.title} className="w-20 h-28 object-cover rounded" />
-                            <div className="flex-1 space-y-2">
-                              <h3 className="font-semibold text-lg">{request.movies.title}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Requested by {request.profiles.email} • {request.duration_days} days
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(request.requested_at).toLocaleDateString()}
-                              </p>
-                              <Textarea
-                                placeholder="Admin notes (optional)"
-                                value={promotionNotes[request.id] || ""}
-                                onChange={(e) => setPromotionNotes({...promotionNotes, [request.id]: e.target.value})}
-                                className="mt-2"
-                              />
-                              <div className="flex gap-2 mt-3">
-                                <Button size="sm" className="bg-gradient-to-r from-premium to-premium-light" onClick={() => handleApprovePromotion(request.id, request.movies.id, request.duration_days)}>
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleRejectPromotion(request.id)}>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            {/* Platform Settings Tab */}
-            <TabsContent value="settings">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle>Platform Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="youtube-url" className="text-base font-semibold flex items-center gap-2">
-                      <Youtube className="h-5 w-5 text-red-500" />
-                      YouTube Channel URL
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      This link will be used for the "Subscribe & Earn ₹100" feature shown to all users.
-                    </p>
-                    <div className="flex gap-3">
-                      <Input
-                        id="youtube-url"
-                        placeholder="https://youtube.com/@yourchannel"
-                        value={youtubeUrl}
-                        onChange={(e) => setYoutubeUrl(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleSaveYoutubeUrl}
-                        disabled={savingSettings}
-                        className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground"
-                      >
-                        {savingSettings ? "Saving..." : "Done"}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+      <div className="container mx-auto px-4 py-12 max-w-7xl space-y-8">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-admin to-admin-light bg-clip-text text-transparent">Admin Dashboard</h1>
+          <Badge className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground"><Crown className="h-3 w-3 mr-1" /> Admin</Badge>
         </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          <Card className="border-admin/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-admin" />
+            </CardHeader>
+            <CardContent><div className="text-2xl font-bold text-admin">{stats.totalUsers}</div></CardContent>
+          </Card>
+          <Card className="border-admin/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Pending Payments</CardTitle>
+              <TrendingUp className="h-4 w-4 text-admin" />
+            </CardHeader>
+            <CardContent><div className="text-2xl font-bold text-admin">{stats.pendingPayments}</div></CardContent>
+          </Card>
+          <Card className="border-admin/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Pending Withdrawals</CardTitle>
+              <Wallet className="h-4 w-4 text-admin" />
+            </CardHeader>
+            <CardContent><div className="text-2xl font-bold text-admin">{stats.pendingWithdrawals}</div></CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="payments" className="space-y-6">
+          <TabsList className="bg-card border border-admin/20">
+            <TabsTrigger value="payments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">Payments Review</TabsTrigger>
+            <TabsTrigger value="withdrawals" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">Withdrawals</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">Users</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-admin data-[state=active]:to-admin-light data-[state=active]:text-admin-foreground">System Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="payments">
+            <Card>
+              <CardHeader><CardTitle>Pending Challenge Payments</CardTitle></CardHeader>
+              <CardContent>
+                {purchases.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No pending payments</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Tx ID</TableHead>
+                        <TableHead>Screenshot</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {purchases.map((p: any) => (
+                        <TableRow key={p.id}>
+                          <TableCell>
+                            <div className="font-medium">{p.profiles?.full_name || "N/A"}</div>
+                            <div className="text-xs text-muted-foreground">{p.profiles?.email}</div>
+                          </TableCell>
+                          <TableCell>
+                            ${p.challenge_plans?.account_size?.toLocaleString()} - {p.challenge_plans?.challenge_type?.replace("_", "-")}
+                          </TableCell>
+                          <TableCell className="font-semibold">${p.challenge_plans?.price_usd}</TableCell>
+                          <TableCell className="font-mono text-xs max-w-[150px] truncate">{p.transaction_id || "N/A"}</TableCell>
+                          <TableCell>
+                            {p.payment_screenshot_url ? (
+                              <a href={p.payment_screenshot_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm">View</Button>
+                              </a>
+                            ) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground" onClick={() => handleApprovePurchase(p.id, p.user_id, p.challenge_plans)}>
+                                <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleRejectPurchase(p.id)}>
+                                <XCircle className="h-3 w-3 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="withdrawals">
+            <Card>
+              <CardHeader><CardTitle>Pending Withdrawals</CardTitle></CardHeader>
+              <CardContent>
+                {withdrawals.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No pending withdrawals</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>USDT Address</TableHead>
+                        <TableHead>Network</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {withdrawals.map((w: any) => (
+                        <TableRow key={w.id}>
+                          <TableCell>
+                            <div className="font-medium">{w.profiles?.full_name || "N/A"}</div>
+                            <div className="text-xs text-muted-foreground">{w.profiles?.email}</div>
+                          </TableCell>
+                          <TableCell className="font-semibold">${w.amount}</TableCell>
+                          <TableCell className="font-mono text-xs max-w-[150px] truncate">{w.usdt_address || "N/A"}</TableCell>
+                          <TableCell>{w.network || "N/A"}</TableCell>
+                          <TableCell>{new Date(w.requested_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground" onClick={() => handleApproveWithdrawal(w.id)}>
+                                <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleRejectWithdrawal(w.id)}>
+                                <XCircle className="h-3 w-3 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>All Users ({users.length})</CardTitle>
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-10" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Balance</TableHead>
+                      <TableHead>Accounts</TableHead>
+                      <TableHead>Registered</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users
+                      .filter((u: any) => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()) || u.full_name?.toLowerCase().includes(userSearch.toLowerCase()))
+                      .map((u: any) => (
+                        <TableRow key={u.id}>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>{u.full_name || "N/A"}</TableCell>
+                          <TableCell>${u.wallets?.[0]?.balance?.toFixed(2) || "0.00"}</TableCell>
+                          <TableCell><Badge variant="outline">{u.trading_accounts?.length || 0}</Badge></TableCell>
+                          <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5" /> System Settings</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>USDT Deposit Address (BEP20)</Label>
+                  <Input value={usdtAddress} onChange={(e) => setUsdtAddress(e.target.value)} className="font-mono" />
+                </div>
+                <Button onClick={handleSaveSettings} disabled={savingSettings} className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground">
+                  {savingSettings ? "Saving..." : "Save Settings"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
