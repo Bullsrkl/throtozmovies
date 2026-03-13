@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      certificates: {
+        Row: {
+          account_id: string
+          certificate_type: string
+          id: string
+          issued_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          certificate_type: string
+          id?: string
+          issued_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          certificate_type?: string
+          id?: string
+          issued_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "trading_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_plans: {
+        Row: {
+          account_size: number
+          challenge_type: Database["public"]["Enums"]["challenge_type"]
+          created_at: string
+          daily_drawdown_limit: number
+          id: string
+          min_trading_days: number
+          overall_drawdown_limit: number
+          price_usd: number
+          profit_target_phase1: number
+          profit_target_phase2: number
+        }
+        Insert: {
+          account_size: number
+          challenge_type: Database["public"]["Enums"]["challenge_type"]
+          created_at?: string
+          daily_drawdown_limit?: number
+          id?: string
+          min_trading_days?: number
+          overall_drawdown_limit?: number
+          price_usd: number
+          profit_target_phase1?: number
+          profit_target_phase2?: number
+        }
+        Update: {
+          account_size?: number
+          challenge_type?: Database["public"]["Enums"]["challenge_type"]
+          created_at?: string
+          daily_drawdown_limit?: number
+          id?: string
+          min_trading_days?: number
+          overall_drawdown_limit?: number
+          price_usd?: number
+          profit_target_phase1?: number
+          profit_target_phase2?: number
+        }
+        Relationships: []
+      }
+      challenge_purchases: {
+        Row: {
+          created_at: string
+          discount_code: string | null
+          id: string
+          payment_screenshot_url: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["purchase_status"]
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_code?: string | null
+          id?: string
+          payment_screenshot_url?: string | null
+          plan_id: string
+          status?: Database["public"]["Enums"]["purchase_status"]
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_code?: string | null
+          id?: string
+          payment_screenshot_url?: string | null
+          plan_id?: string
+          status?: Database["public"]["Enums"]["purchase_status"]
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_purchases_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_purchases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       download_logs: {
         Row: {
           created_at: string
@@ -475,6 +601,78 @@ export type Database = {
           },
         ]
       }
+      trading_accounts: {
+        Row: {
+          account_number: string
+          balance: number
+          created_at: string
+          daily_drawdown: number
+          id: string
+          overall_drawdown: number
+          password: string
+          phase: Database["public"]["Enums"]["account_phase"]
+          platform: string
+          profit_percent: number
+          profit_target: number
+          purchase_id: string
+          server: string
+          status: Database["public"]["Enums"]["account_status"]
+          trading_days: number
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          balance?: number
+          created_at?: string
+          daily_drawdown?: number
+          id?: string
+          overall_drawdown?: number
+          password: string
+          phase?: Database["public"]["Enums"]["account_phase"]
+          platform?: string
+          profit_percent?: number
+          profit_target?: number
+          purchase_id: string
+          server?: string
+          status?: Database["public"]["Enums"]["account_status"]
+          trading_days?: number
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          balance?: number
+          created_at?: string
+          daily_drawdown?: number
+          id?: string
+          overall_drawdown?: number
+          password?: string
+          phase?: Database["public"]["Enums"]["account_phase"]
+          platform?: string
+          profit_percent?: number
+          profit_target?: number
+          purchase_id?: string
+          server?: string
+          status?: Database["public"]["Enums"]["account_status"]
+          trading_days?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trading_accounts_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trading_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -548,12 +746,14 @@ export type Database = {
           amount: number
           id: string
           net_amount: number
+          network: string | null
           payment_receipt_url: string | null
           platform_fee: number
           processed_at: string | null
           requested_at: string
           status: Database["public"]["Enums"]["withdrawal_status"] | null
-          upi_id: string
+          upi_id: string | null
+          usdt_address: string | null
           user_id: string
         }
         Insert: {
@@ -561,12 +761,14 @@ export type Database = {
           amount: number
           id?: string
           net_amount: number
+          network?: string | null
           payment_receipt_url?: string | null
           platform_fee: number
           processed_at?: string | null
           requested_at?: string
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
-          upi_id: string
+          upi_id?: string | null
+          usdt_address?: string | null
           user_id: string
         }
         Update: {
@@ -574,12 +776,14 @@ export type Database = {
           amount?: number
           id?: string
           net_amount?: number
+          network?: string | null
           payment_receipt_url?: string | null
           platform_fee?: number
           processed_at?: string | null
           requested_at?: string
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
-          upi_id?: string
+          upi_id?: string | null
+          usdt_address?: string | null
           user_id?: string
         }
         Relationships: [
@@ -618,7 +822,15 @@ export type Database = {
       }
     }
     Enums: {
+      account_phase: "phase1" | "phase2" | "master"
+      account_status: "active" | "passed" | "failed" | "funded"
       app_role: "admin" | "creator" | "user"
+      challenge_type: "instant" | "one_step" | "two_step"
+      purchase_status:
+        | "pending_payment"
+        | "payment_submitted"
+        | "approved"
+        | "rejected"
       subscription_status: "active" | "expired" | "cancelled" | "trial"
       withdrawal_status: "pending" | "paid" | "rejected"
     }
@@ -748,7 +960,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_phase: ["phase1", "phase2", "master"],
+      account_status: ["active", "passed", "failed", "funded"],
       app_role: ["admin", "creator", "user"],
+      challenge_type: ["instant", "one_step", "two_step"],
+      purchase_status: [
+        "pending_payment",
+        "payment_submitted",
+        "approved",
+        "rejected",
+      ],
       subscription_status: ["active", "expired", "cancelled", "trial"],
       withdrawal_status: ["pending", "paid", "rejected"],
     },
