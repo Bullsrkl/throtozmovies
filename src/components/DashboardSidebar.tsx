@@ -3,15 +3,13 @@ import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Film,
+  BarChart3,
   Wallet,
-  TrendingUp,
-  Crown,
-  Megaphone,
+  Award,
+  Trophy,
   Settings,
   ChevronLeft,
   ChevronRight,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,12 +19,10 @@ interface DashboardSidebarProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
-  { icon: Film, label: "My Uploads", path: "/dashboard/uploads" },
+  { icon: BarChart3, label: "Trading Accounts", path: "/dashboard/accounts" },
+  { icon: Trophy, label: "Competition", path: "/dashboard/competition" },
   { icon: Wallet, label: "Wallet", path: "/dashboard/wallet" },
-  { icon: TrendingUp, label: "Analytics", path: "/dashboard/analytics" },
-  { icon: Crown, label: "Subscription", path: "/dashboard/subscription" },
-  { icon: Megaphone, label: "Promotions", path: "/dashboard/promotions" },
-  { icon: Users, label: "Referrals", path: "/dashboard/referrals" },
+  { icon: Award, label: "Certificates", path: "/dashboard/certificates" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
@@ -42,28 +38,17 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
       )}
     >
       <div className="flex h-full flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           {!collapsed && (
-            <h2 className="font-display font-bold bg-gradient-to-r from-premium to-premium-light bg-clip-text text-transparent">
+            <h2 className="font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
               Dashboard
             </h2>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto"
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+          <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="ml-auto">
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 space-y-1 p-2">
           {menuItems.map((item) => (
             <NavLink
@@ -75,7 +60,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
                 "text-muted-foreground hover:bg-accent hover:text-foreground",
                 collapsed && "justify-center"
               )}
-              activeClassName="bg-gradient-to-r from-premium/10 to-premium-light/10 text-premium border-l-2 border-premium"
+              activeClassName="bg-gradient-to-r from-primary/10 to-primary-light/10 text-primary border-l-2 border-primary"
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {!collapsed && <span>{item.label}</span>}

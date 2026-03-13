@@ -8,54 +8,57 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Tech-Noir Dark Theme */
-    --background: 218 28% 5%; /* Deep charcoal #0B0E13 */
-    --foreground: 210 20% 92%; /* Light text #E6EEF3 */
+    /* Prop Gym Dark Fintech Theme */
+    --background: 220 20% 4%; /* Deep dark #0A0D12 */
+    --foreground: 210 20% 92%;
 
-    --card: 215 24% 9%; /* Card surface #0F1720 */
+    --card: 220 18% 8%; /* Card surface #111621 */
     --card-foreground: 210 20% 92%;
 
-    --popover: 215 24% 9%;
+    --popover: 220 18% 8%;
     --popover-foreground: 210 20% 92%;
 
-    /* Orange gradient primary (visitors) */
-    --primary: 19 100% 50%; /* #FF6A00 */
-    --primary-light: 22 100% 62%; /* #FF8A3D */
-    --primary-foreground: 210 20% 92%;
+    /* Teal/Cyan primary accent */
+    --primary: 168 80% 45%; /* Teal #17B897 */
+    --primary-light: 168 65% 55%; /* Lighter teal #3DCFAE */
+    --primary-foreground: 220 20% 4%;
 
-    /* Light green premium gradient */
-    --premium: 158 79% 66%; /* #6EE7B7 */
-    --premium-light: 158 58% 51%; /* #2BC48A */
-    --premium-foreground: 218 28% 5%;
+    /* Light green premium gradient (keep) */
+    --premium: 158 79% 66%;
+    --premium-light: 158 58% 51%;
+    --premium-foreground: 220 20% 4%;
 
-    /* Golden admin gradient */
-    --admin: 43 63% 52%; /* #D4AF37 */
-    --admin-light: 44 100% 67%; /* #FFC85A */
-    --admin-foreground: 218 28% 5%;
+    /* Golden admin gradient (keep) */
+    --admin: 43 63% 52%;
+    --admin-light: 44 100% 67%;
+    --admin-foreground: 220 20% 4%;
 
-    --secondary: 215 24% 12%;
+    --secondary: 220 18% 12%;
     --secondary-foreground: 210 20% 92%;
 
-    --muted: 215 16% 16%;
-    --muted-foreground: 215 12% 64%; /* #9AA6B2 */
+    --muted: 220 14% 16%;
+    --muted-foreground: 220 10% 58%;
 
-    --accent: 215 24% 14%;
+    --accent: 220 18% 14%;
     --accent-foreground: 210 20% 92%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 20% 92%;
 
-    --border: 215 16% 20%;
-    --input: 215 16% 16%;
-    --ring: 19 100% 50%;
+    --border: 220 14% 18%;
+    --input: 220 14% 16%;
+    --ring: 168 80% 45%;
 
-    --radius: 1rem; /* 16px rounded corners */
+    --radius: 1rem;
 
-    /* Shadows with metallic depth */
-    --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.4);
-    --shadow-elevated: 0 12px 48px -8px rgba(0, 0, 0, 0.5);
+    /* Shadows */
+    --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.5);
+    --shadow-elevated: 0 12px 48px -8px rgba(0, 0, 0, 0.6);
     
-    /* Transitions */
+    /* Glass effect */
+    --glass-bg: rgba(17, 22, 33, 0.7);
+    --glass-border: rgba(23, 184, 151, 0.15);
+    
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
