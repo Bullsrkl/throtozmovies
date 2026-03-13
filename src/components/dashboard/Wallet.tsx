@@ -212,7 +212,7 @@ export function Wallet() {
                     <TableRow key={w.id}>
                       <TableCell>{new Date(w.requested_at).toLocaleDateString()}</TableCell>
                       <TableCell className="font-semibold">${w.amount.toFixed(2)}</TableCell>
-                      <TableCell className="font-mono text-xs">{w.usdt_address || w.upi_id || "N/A"}</TableCell>
+                      <TableCell className="font-mono text-xs">{w.usdt_address || "N/A"}</TableCell>
                       <TableCell>{w.network || "N/A"}</TableCell>
                       <TableCell>
                         <Badge className={
