@@ -19,6 +19,8 @@ const BASE_PRICES: Record<number, number> = {
   500000: 350,
 };
 
+type ChallengeType = "instant" | "one_step" | "two_step";
+
 function getPrice(size: number, type: string): number {
   const base = BASE_PRICES[size];
   if (!base) return 0;
