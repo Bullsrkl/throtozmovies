@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import BuyChallenge from "./pages/BuyChallenge";
+import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
