@@ -1,78 +1,37 @@
 
 
-## Adsterra Ad Integration Plan
+# Plan: Fix Payment/Checkout Flow
 
-### Ad Script Details
-```html
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
-```
+Currently, clicking "Buy Challenge" navigates to `/checkout` which doesn't exist. Need to build the full USDT payment flow as originally specified.
 
-This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
+## Changes
 
----
+### 1. Create Checkout Page (`src/pages/Checkout.tsx`)
+A new page that receives `size` and `type` from URL params and shows:
+- **Order summary** card (account size, challenge type, price)
+- **USDT deposit address** (`0xe00f8c174fdbf8b0a0ff5688e650422f805b6c9c`) fetched from `platform_settings`
+- **Network**: BEP20
+- **Copy button** for address
+- **Optional discount code** input field
+- **Transaction ID** text input (required)
+- **Payment screenshot** file upload (to `payment-screenshots` bucket)
+- **Submit Payment** button
 
-### Implementation Strategy
+Flow: Finds matching `challenge_plans` row by size+type, creates a `challenge_purchases` record with status `payment_submitted`, uploads screenshot, and shows success confirmation.
 
-**Option 1: Global Script (Recommended)**
-Add the script to `index.html` so it loads on every page of the website.
+### 2. Add Route in `App.tsx`
+Add `/checkout` route pointing to the new Checkout page.
 
-**Option 2: Component-Based**
-Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
+### 3. Update `BuyChallenge.tsx`
+The existing code already navigates to `/checkout?size=X&type=Y` — no changes needed here.
 
----
-
-### Recommended Approach: Global Integration
-
-**File to Modify:** `index.html`
-
-**Where to Add:**
-Place the script just before the closing `</body>` tag to ensure the page content loads first.
-
-```text
-Current Structure:
-┌──────────────────────────────┐
-│ <head>                       │
-│   ... meta tags, fonts ...   │
-│ </head>                      │
-│ <body>                       │
-│   <div id="root"></div>      │
-│   <script src="main.tsx">    │
-│   <!-- ADD ADSTERRA HERE --> │
-│ </body>                      │
-└──────────────────────────────┘
-```
-
----
+### 4. Add RLS Policy for `challenge_purchases`
+Users need UPDATE permission on their own purchases to submit transaction details. Current policies only allow INSERT and SELECT. Add an UPDATE policy for users to update their own pending purchases.
 
 ### Technical Details
-
-**Changes to `index.html`:**
-Add the Adsterra script after the main app script:
-```html
-<script type="module" src="/src/main.tsx"></script>
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
-```
-
----
-
-### Expected Behavior
-
-Once integrated:
-- Social Bar will appear on every page (floating bar at bottom/side)
-- Or Popunder ad will trigger on first user click
-- Non-intrusive and won't block content
-- Automatic monetization with each impression
-
----
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `index.html` | Add Adsterra script before `</body>` |
-
----
-
-### Timeline
-Single file change - instant deployment after implementation
+- Screenshot upload uses existing `payment-screenshots` storage bucket
+- USDT address fetched dynamically from `platform_settings` table (key: `usdt_deposit_address`)
+- Input validation: Transaction ID required, screenshot required, max file size 20MB
+- After submission, redirect to dashboard with success toast
+- Mobile-first responsive design matching the dark fintech theme
 
