@@ -112,7 +112,7 @@ export default function Checkout() {
         .from("challenge_plans")
         .select("id")
         .eq("account_size", size)
-        .eq("challenge_type", type)
+        .eq("challenge_type", type as ChallengeType)
         .single();
 
       if (planError || !plan) {
