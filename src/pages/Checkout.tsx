@@ -279,14 +279,39 @@ export default function Checkout() {
 
             <div>
               <Label htmlFor="discount">Discount Code (optional)</Label>
-              <Input
-                id="discount"
-                placeholder="Enter code"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-                maxLength={50}
-                className="mt-1"
-              />
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  id="discount"
+                  placeholder="Enter code"
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value);
+                    setDiscountApplied(false);
+                  }}
+                  maxLength={50}
+                  disabled={discountApplied}
+                />
+                <Button
+                  type="button"
+                  variant={discountApplied ? "outline" : "secondary"}
+                  className={discountApplied ? "border-primary text-primary gap-1 shrink-0" : "shrink-0"}
+                  onClick={() => {
+                    if (discountApplied) {
+                      setDiscountApplied(false);
+                      setDiscountCode("");
+                    } else if (discountCode.trim()) {
+                      setDiscountApplied(true);
+                    }
+                  }}
+                  disabled={!discountCode.trim() && !discountApplied}
+                >
+                  {discountApplied ? (
+                    <><CheckCircle className="h-4 w-4" /> Applied</>
+                  ) : (
+                    "Apply"
+                  )}
+                </Button>
+              </div>
             </div>
 
             <Button

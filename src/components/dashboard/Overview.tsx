@@ -2,102 +2,76 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Wallet, TrendingUp, Calendar, Crown, Youtube } from "lucide-react";
+import { Wallet, TrendingUp, ShieldCheck, Clock, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 interface Stats {
-  totalUploads: number;
-  totalDownloads: number;
+  activeAccounts: number;
   walletBalance: number;
-  subscriptionStatus: string | null;
-  subscriptionPlan: string | null;
-  expiryDate: string | null;
-  youtubeBonusClaimed: boolean;
+  totalProfit: number;
+  pendingPurchases: number;
+}
+
+interface RecentAccount {
+  id: string;
+  account_number: string;
+  phase: string;
+  status: string;
+  balance: number;
+  profit_percent: number;
+  created_at: string;
 }
 
 export function Overview() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
-    totalUploads: 0,
-    totalDownloads: 0,
+    activeAccounts: 0,
     walletBalance: 0,
-    subscriptionStatus: null,
-    subscriptionPlan: null,
-    expiryDate: null,
-    youtubeBonusClaimed: false,
+    totalProfit: 0,
+    pendingPurchases: 0,
   });
+  const [recentAccounts, setRecentAccounts] = useState<RecentAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    fetchStats();
-    fetchYoutubeUrl();
+    fetchData();
   }, [user]);
 
-  const fetchYoutubeUrl = async () => {
-    const { data } = await supabase
-      .from("platform_settings")
-      .select("value")
-      .eq("key", "youtube_channel_url")
-      .single();
-    if (data) setYoutubeUrl(data.value);
-  };
-
-  const fetchStats = async () => {
+  const fetchData = async () => {
     try {
-      // Fetch uploads count
-      const { count: uploadsCount } = await supabase
-        .from("movies")
-        .select("*", { count: "exact", head: true })
-        .eq("uploader_id", user!.id);
+      const [accountsRes, walletRes, pendingRes] = await Promise.all([
+        supabase
+          .from("trading_accounts")
+          .select("*")
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("wallets")
+          .select("balance, total_earnings")
+          .eq("user_id", user!.id)
+          .single(),
+        supabase
+          .from("challenge_purchases")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user!.id)
+          .in("status", ["pending_payment", "payment_submitted"]),
+      ]);
 
-      // Fetch downloads (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { count: downloadsCount } = await supabase
-        .from("download_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("uploader_id", user!.id)
-        .gte("created_at", thirtyDaysAgo.toISOString());
-
-      // Fetch wallet balance
-      const { data: walletData } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user!.id)
-        .single();
-
-      // Fetch subscription
-      const { data: subscriptionData } = await supabase
-        .from("subscriptions")
-        .select("status, expiry_date, plan_id, subscription_plans(plan_name)")
-        .eq("user_id", user!.id)
-        .eq("payment_verified", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      // Fetch YouTube bonus status
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("youtube_bonus_claimed")
-        .eq("id", user!.id)
-        .single();
+      const accounts = accountsRes.data || [];
+      const active = accounts.filter((a) => a.status === "active" || a.status === "funded");
+      const totalProfit = accounts.reduce((sum, a) => sum + (a.profit_percent || 0), 0);
 
       setStats({
-        totalUploads: uploadsCount || 0,
-        totalDownloads: downloadsCount || 0,
-        walletBalance: walletData?.balance || 0,
-        subscriptionStatus: subscriptionData?.status || null,
-        subscriptionPlan: subscriptionData?.subscription_plans?.plan_name || null,
-        expiryDate: subscriptionData?.expiry_date || null,
-        youtubeBonusClaimed: profileData?.youtube_bonus_claimed || false,
+        activeAccounts: active.length,
+        walletBalance: walletRes.data?.balance || 0,
+        totalProfit,
+        pendingPurchases: pendingRes.count || 0,
       });
+      setRecentAccounts(accounts.slice(0, 5));
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
@@ -105,150 +79,39 @@ export function Overview() {
     }
   };
 
-  const getNextSaturday = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
-    const nextSaturday = new Date(today);
-    nextSaturday.setDate(today.getDate() + daysUntilSaturday);
-    return nextSaturday.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const statusColor: Record<string, string> = {
+    active: "bg-green-500/20 text-green-400",
+    funded: "bg-primary/20 text-primary",
+    passed: "bg-blue-500/20 text-blue-400",
+    failed: "bg-destructive/20 text-destructive",
   };
 
-  const handleYouTubeSubscribe = async () => {
-    if (stats.youtubeBonusClaimed) {
-      toast.info("You've already claimed this bonus!");
-      openYouTubeChannel();
-      return;
-    }
-
-    try {
-      // Mark as claimed
-      await supabase
-        .from("profiles")
-        .update({ youtube_bonus_claimed: true })
-        .eq("id", user!.id);
-      
-      // Credit ₹100 bonus
-      await supabase.rpc('credit_wallet_bonus', {
-        p_user_id: user!.id,
-        p_amount: 100
-      });
-
-      toast.success("₹100 bonus credited to your wallet!");
-      
-      // Update local state
-      setStats(prev => ({ ...prev, youtubeBonusClaimed: true, walletBalance: prev.walletBalance + 100 }));
-      
-      // Open YouTube
-      openYouTubeChannel();
-    } catch (error) {
-      console.error("Error claiming bonus:", error);
-      toast.error("Failed to claim bonus");
-    }
-  };
-
-  const openYouTubeChannel = () => {
-    if (!youtubeUrl) return;
-    // Extract channel handle from URL for deep link
-    const url = new URL(youtubeUrl);
-    const channelPath = url.pathname;
-    const youtubeDeepLink = `vnd.youtube://www.youtube.com${channelPath}?sub_confirmation=1`;
-    
-    window.location.href = youtubeDeepLink;
-    
-    setTimeout(() => {
-      const fallback = youtubeUrl.includes('sub_confirmation') ? youtubeUrl : `${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}sub_confirmation=1`;
-      window.open(fallback, '_blank');
-    }, 500);
+  const phaseLabel: Record<string, string> = {
+    phase1: "Phase 1",
+    phase2: "Phase 2",
+    master: "Master",
   };
 
   if (loading) {
-    return <div className="text-center py-12">Loading dashboard...</div>;
+    return <div className="text-center py-12 text-muted-foreground">Loading dashboard...</div>;
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-display font-bold">Creator Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage your content and earnings</p>
-        </div>
-        <Button
-          className="bg-gradient-to-r from-premium to-premium-light hover:opacity-90"
-          onClick={() => navigate("/upload")}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          New Upload
-        </Button>
+      <div>
+        <h1 className="text-3xl font-display font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Your trading overview</p>
       </div>
 
-      {/* YouTube Subscribe Bonus Card */}
-      <Card className="shadow-card border-2 border-red-500/20 bg-gradient-to-r from-red-500/5 to-red-600/5">
-        <CardContent className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
-            <Youtube className="h-8 w-8 text-red-500" />
-            <div>
-              <p className="font-semibold">Earn ₹100 Bonus!</p>
-              <p className="text-sm text-muted-foreground">
-                {stats.youtubeBonusClaimed ? "Already claimed - Visit channel" : "Subscribe to our YouTube channel"}
-              </p>
-            </div>
-          </div>
-          <Button 
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleYouTubeSubscribe}
-          >
-            {stats.youtubeBonusClaimed ? "Visit Channel" : "Subscribe & Earn ₹100"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Subscription Badge */}
-      {stats.subscriptionPlan && (
-        <Card className="border-premium/20 bg-gradient-to-r from-premium/5 to-premium-light/5">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <Crown className="h-6 w-6 text-premium" />
-              <div>
-                <p className="font-semibold text-premium">
-                  {stats.subscriptionPlan} Plan Active
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {stats.expiryDate && `Expires: ${new Date(stats.expiryDate).toLocaleDateString("en-IN")}`}
-                </p>
-              </div>
-            </div>
-            <Badge className="bg-premium text-premium-foreground">
-              {stats.subscriptionStatus?.toUpperCase()}
-            </Badge>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Uploads</CardTitle>
-            <Upload className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active Accounts</CardTitle>
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUploads}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalUploads === 0 ? "No uploads yet" : "Movies/Series"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Downloads (30d)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDownloads}</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">{stats.activeAccounts}</div>
           </CardContent>
         </Card>
 
@@ -258,42 +121,73 @@ export function Overview() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{stats.walletBalance.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Available balance</p>
+            <div className="text-2xl font-bold">${stats.walletBalance.toFixed(2)}</div>
           </CardContent>
         </Card>
 
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Next Payout</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getNextSaturday()}</div>
-            <p className="text-xs text-muted-foreground">Every Saturday</p>
+            <div className="text-2xl font-bold">{stats.totalProfit.toFixed(1)}%</div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingPurchases}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      {!stats.subscriptionPlan && (
+      {/* Recent Accounts */}
+      {recentAccounts.length > 0 ? (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Get Started</CardTitle>
+            <CardTitle>Recent Accounts</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-accent border border-border">
-              <div>
-                <h3 className="font-semibold">Subscribe to a Plan</h3>
-                <p className="text-sm text-muted-foreground">Start uploading and earning</p>
-              </div>
-              <Button
-                className="bg-gradient-to-r from-premium to-premium-light"
-                onClick={() => navigate("/subscriptions")}
+          <CardContent className="space-y-3">
+            {recentAccounts.map((account) => (
+              <div
+                key={account.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border"
               >
-                View Plans
-              </Button>
+                <div>
+                  <p className="font-medium text-sm">{account.account_number}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {phaseLabel[account.phase] || account.phase} · ${account.balance.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{account.profit_percent}%</span>
+                  <Badge className={statusColor[account.status] || "bg-muted text-muted-foreground"}>
+                    {account.status.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="shadow-card">
+          <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+            <div className="text-center">
+              <h3 className="font-semibold text-lg">No Trading Accounts Yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">Buy a challenge to get started</p>
             </div>
+            <Button
+              className="bg-gradient-to-r from-primary to-primary/80"
+              onClick={() => navigate("/buy-challenge")}
+            >
+              Buy Challenge
+            </Button>
           </CardContent>
         </Card>
       )}
