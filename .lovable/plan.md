@@ -1,78 +1,71 @@
 
 
-## Adsterra Ad Integration Plan
+# Plan: Trading Account Detail View with Credentials, Drawdown Bars & Rules
 
-### Ad Script Details
-```html
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+## Overview
+
+Currently, the Trading Accounts page shows a flat list of account cards. The user wants a **click-to-expand detail view** for each account showing:
+
+1. **Platform Credentials** (Account Number, Password, Server, Platform) at the top
+2. **Drawdown percentage bars** with limit numbers (Daily DD used vs 5% limit, Overall DD used vs 10% limit)
+3. **All trading rules** displayed visually (profit target, min trading days, drawdown limits, etc.)
+4. **Analytics section** (balance, profit, phase progress)
+
+## Changes
+
+### 1. Rewrite `TradingAccounts.tsx` — Clickable Account Cards with Detail View
+
+**Account List View (default):**
+- Each account shown as a compact card with account number, status badge, phase badge, balance, profit %
+- Clicking a card expands it or navigates to a detail view (using local state, no new route needed)
+
+**Account Detail View (when clicked):**
+
+**Section A — Credentials Card**
+- Match Trader / MetaTrader credentials box with copy buttons
+- Fields: Account Number, Password (masked with show/hide toggle), Server, Platform
+- Styled as a bordered card with a key/lock icon
+
+**Section B — Performance Metrics**
+- Balance, Profit %, Trading Days — stat cards (existing, cleaned up)
+
+**Section C — Drawdown Bars with Limits**
+- **Daily Drawdown**: Progress bar showing `daily_drawdown` used out of `daily_drawdown_limit` (from challenge_plans via purchase_id)
+  - Color: green when < 50% used, yellow 50-80%, red > 80%
+  - Label: "2.1% / 5% Daily Drawdown Limit"
+- **Overall Drawdown**: Same visual pattern for `overall_drawdown` vs `overall_drawdown_limit`
+  - Label: "4.5% / 10% Overall Drawdown Limit"
+
+**Section D — Trading Rules (Visual)**
+- Grid of rule cards, each with icon + label + value + status (pass/fail/in-progress):
+  - Profit Target: `profit_percent` vs `profit_target` (progress bar)
+  - Min Trading Days: `trading_days` vs `min_trading_days` (e.g., "3 / 5 days")
+  - Daily Drawdown Limit: current vs limit
+  - Overall Drawdown Limit: current vs limit
+  - Each rule shows a checkmark (green) if met, warning (yellow) if approaching, or active indicator
+
+### 2. Fetch Related Plan Data
+
+The `trading_accounts` table has `purchase_id` → `challenge_purchases` → `plan_id` → `challenge_plans`. Need to join or separately fetch the plan data to get `daily_drawdown_limit`, `overall_drawdown_limit`, `min_trading_days`, `profit_target_phase1/phase2`.
+
+Query approach: Fetch accounts, then for each account fetch its purchase → plan. Or do a single query with nested select:
+```typescript
+supabase.from("trading_accounts")
+  .select("*, challenge_purchases!inner(plan_id, challenge_plans!inner(*))")
 ```
 
-This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
+This gives us all the plan rules for each account.
 
----
+### 3. Back Button
 
-### Implementation Strategy
+When viewing account detail, show a back arrow button to return to the accounts list.
 
-**Option 1: Global Script (Recommended)**
-Add the script to `index.html` so it loads on every page of the website.
+## Technical Details
 
-**Option 2: Component-Based**
-Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
-
----
-
-### Recommended Approach: Global Integration
-
-**File to Modify:** `index.html`
-
-**Where to Add:**
-Place the script just before the closing `</body>` tag to ensure the page content loads first.
-
-```text
-Current Structure:
-┌──────────────────────────────┐
-│ <head>                       │
-│   ... meta tags, fonts ...   │
-│ </head>                      │
-│ <body>                       │
-│   <div id="root"></div>      │
-│   <script src="main.tsx">    │
-│   <!-- ADD ADSTERRA HERE --> │
-│ </body>                      │
-└──────────────────────────────┘
-```
-
----
-
-### Technical Details
-
-**Changes to `index.html`:**
-Add the Adsterra script after the main app script:
-```html
-<script type="module" src="/src/main.tsx"></script>
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
-```
-
----
-
-### Expected Behavior
-
-Once integrated:
-- Social Bar will appear on every page (floating bar at bottom/side)
-- Or Popunder ad will trigger on first user click
-- Non-intrusive and won't block content
-- Automatic monetization with each impression
-
----
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `index.html` | Add Adsterra script before `</body>` |
-
----
-
-### Timeline
-Single file change - instant deployment after implementation
+- No new routes needed — use `selectedAccount` state in `TradingAccounts.tsx`
+- Drawdown bars use the existing `<Progress>` component with conditional colors via className
+- Credentials password uses a show/hide toggle with `Eye`/`EyeOff` icons from lucide
+- Copy buttons use `navigator.clipboard.writeText()` with toast feedback
+- All data comes from existing tables — no database changes needed
+- Mobile responsive: stack all sections vertically on 375px viewport
 
