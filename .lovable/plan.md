@@ -1,42 +1,78 @@
 
 
-# Plan: Fix Payment Upload + Add Discount Apply Button + Fix Overview + Cleanup
+## Adsterra Ad Integration Plan
 
-## Issues Found
+### Ad Script Details
+```html
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+```
 
-1. **Screenshot upload fails**: The `payment-screenshots` storage bucket has ZERO RLS policies. Authenticated users cannot upload files to it. This is the root cause of the submit failure.
+This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
 
-2. **Discount code field**: Has no "Apply" button next to it. Need to add an inline Apply button.
+---
 
-3. **Dashboard Overview (`Overview.tsx`)**: Still has old movie-related content — "Creator Dashboard", movie uploads count, downloads count, YouTube subscribe bonus, subscription plan references, ₹ currency. Needs complete rewrite for Prop Gym (show active accounts, wallet balance, recent purchases).
+### Implementation Strategy
 
-4. **Settings avatar upload**: Uses `payment-screenshots` bucket for avatars — should work once storage policies are fixed, but ideally should use a dedicated bucket or at least the same bucket with proper paths.
+**Option 1: Global Script (Recommended)**
+Add the script to `index.html` so it loads on every page of the website.
 
-## Changes
+**Option 2: Component-Based**
+Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
 
-### 1. Database Migration — Storage RLS Policies for `payment-screenshots`
-Add storage policies so authenticated users can upload and view files:
-- INSERT policy: authenticated users can upload to `payment-screenshots`
-- SELECT policy: anyone can view (bucket is public)
-- UPDATE/DELETE: authenticated users on their own files
+---
 
-### 2. Fix Checkout.tsx — Add "Apply" Button for Discount Code
-- Add an "Apply" button inline next to the discount code input
-- Show visual feedback (green checkmark or "Applied!" text) when applied
-- Keep discount code state as-is (already sent with the purchase record)
+### Recommended Approach: Global Integration
 
-### 3. Rewrite Overview.tsx for Prop Gym
-Replace movie stats with trading-relevant dashboard:
-- **Stats cards**: Active Accounts, Wallet Balance, Total Profit, Pending Purchases
-- **Recent Accounts**: Show latest trading account status
-- **Quick Action**: "Buy Challenge" CTA if no accounts exist
-- Remove all movie/YouTube/subscription/₹ references
+**File to Modify:** `index.html`
 
-### 4. Minor Cleanup
-- Settings.tsx: Avatar upload bucket reference is fine (payment-screenshots is public), no change needed
+**Where to Add:**
+Place the script just before the closing `</body>` tag to ensure the page content loads first.
 
-## Technical Details
-- Storage policies use `storage.objects` table with `bucket_id` filter
-- The `payment-screenshots` bucket is already set to public, so SELECT is open, but INSERT needs an authenticated user policy
-- Overview will query `trading_accounts`, `wallets`, and `challenge_purchases` tables
+```text
+Current Structure:
+┌──────────────────────────────┐
+│ <head>                       │
+│   ... meta tags, fonts ...   │
+│ </head>                      │
+│ <body>                       │
+│   <div id="root"></div>      │
+│   <script src="main.tsx">    │
+│   <!-- ADD ADSTERRA HERE --> │
+│ </body>                      │
+└──────────────────────────────┘
+```
+
+---
+
+### Technical Details
+
+**Changes to `index.html`:**
+Add the Adsterra script after the main app script:
+```html
+<script type="module" src="/src/main.tsx"></script>
+<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
+```
+
+---
+
+### Expected Behavior
+
+Once integrated:
+- Social Bar will appear on every page (floating bar at bottom/side)
+- Or Popunder ad will trigger on first user click
+- Non-intrusive and won't block content
+- Automatic monetization with each impression
+
+---
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `index.html` | Add Adsterra script before `</body>` |
+
+---
+
+### Timeline
+Single file change - instant deployment after implementation
 
