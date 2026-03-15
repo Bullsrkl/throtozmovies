@@ -51,6 +51,7 @@ export default function Checkout() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState(false);
 
   useEffect(() => {
     if (!user) {
