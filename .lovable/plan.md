@@ -1,78 +1,57 @@
 
 
-## Adsterra Ad Integration Plan
+# Plan: Wallet Fix + MetaTrader 5 + Referral/Affiliate System
 
-### Ad Script Details
-```html
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
-```
+## Changes
 
-This is an **Adsterra Social Bar / Popunder** ad script that automatically displays ads on page load.
+### 1. Database Migration
+- Change `trading_accounts.platform` default from `'Match Trader'` to `'MetaTrader 5'`
+- Update existing rows: `UPDATE trading_accounts SET platform = 'MetaTrader 5' WHERE platform = 'Match Trader'`
+- Add columns to `profiles` table: `referred_by` (uuid, nullable, references profiles.id) to track who referred whom
+- Create `discount_codes` table or reuse `referral_code` from profiles as the discount code system. Since each user's referral code IS their discount code (25% off), no new table needed — we validate against `profiles.referral_code`
 
----
+### 2. Wallet — Zero Default Balance
+- In `Wallet.tsx`, the balance already comes from the DB (default 0). No code change needed — the wallet table already defaults to 0. If the user sees non-zero, it's DB data. The display is correct as-is.
 
-### Implementation Strategy
+### 3. Auth Page — Add Optional Referral Code Field on Signup
+- Add a `referralCode` state and an input field with an **Apply** button (shown only during signup)
+- When user clicks Apply, query `profiles` table for `referral_code = inputValue`
+- If found, show the referrer's `full_name` in green below the field
+- If not found, show "Invalid code" in red
+- Store the referral code in `user_metadata` during signUp so it can be processed after account creation
+- For Google signup: add referral code to URL state/localStorage, process after OAuth redirect
+- After signup completes, use `referred_by` on the new user's profile to link referrer
 
-**Option 1: Global Script (Recommended)**
-Add the script to `index.html` so it loads on every page of the website.
+### 4. Handle Referral After Signup (DB trigger update)
+- Update `handle_new_user()` trigger to check if `raw_user_meta_data->>'referral_code'` exists
+- If it does, look up the referrer's profile by referral_code, set `referred_by` on the new profile
+- Insert into `referrals` table linking referrer and referred user
 
-**Option 2: Component-Based**
-Create a React component that loads the script only on specific pages (like homepage, movie detail modal).
+### 5. Dashboard — Referral/Affiliate Page
+- Add new sidebar item "Refer & Earn" with `Users` icon between Certificates and Settings
+- Create `src/components/dashboard/Referral.tsx`:
+  - Show user's referral code prominently with copy button
+  - Show affiliate link (`{origin}/auth?ref=CODE`) with copy button
+  - Explain: "Share your code — new users get 25% off their first challenge"
+  - Show referral stats: total referrals, active referrals (from `referrals` table)
+- Add route in `Dashboard.tsx`
 
----
+### 6. Checkout — Validate Discount Code as Referral Code
+- When user clicks "Apply" on discount code in Checkout:
+  - Query `profiles` where `referral_code = discountCode`
+  - If valid: check if current user has never purchased before (`challenge_purchases` count = 0)
+  - If first purchase + valid code: apply 25% discount, show referrer name in green, update displayed price
+  - If not first purchase: show "Discount only valid for first purchase"
+  - If invalid code: show "Invalid code" in red
+- Store discount in purchase record, apply to displayed total
 
-### Recommended Approach: Global Integration
+### 7. Update `index.html` Keywords
+- Replace "Match Trader" with "MetaTrader 5" in meta keywords
 
-**File to Modify:** `index.html`
-
-**Where to Add:**
-Place the script just before the closing `</body>` tag to ensure the page content loads first.
-
-```text
-Current Structure:
-┌──────────────────────────────┐
-│ <head>                       │
-│   ... meta tags, fonts ...   │
-│ </head>                      │
-│ <body>                       │
-│   <div id="root"></div>      │
-│   <script src="main.tsx">    │
-│   <!-- ADD ADSTERRA HERE --> │
-│ </body>                      │
-└──────────────────────────────┘
-```
-
----
-
-### Technical Details
-
-**Changes to `index.html`:**
-Add the Adsterra script after the main app script:
-```html
-<script type="module" src="/src/main.tsx"></script>
-<script src="https://pl28581788.effectivegatecpm.com/2d/3c/a4/2d3ca4e8cc3d556a75388d75ff1997bb.js"></script>
-```
-
----
-
-### Expected Behavior
-
-Once integrated:
-- Social Bar will appear on every page (floating bar at bottom/side)
-- Or Popunder ad will trigger on first user click
-- Non-intrusive and won't block content
-- Automatic monetization with each impression
-
----
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `index.html` | Add Adsterra script before `</body>` |
-
----
-
-### Timeline
-Single file change - instant deployment after implementation
+## Technical Details
+- Referral codes already exist on profiles (generated by `generate_referral_code` trigger)
+- The `referrals` table already exists with proper RLS
+- Google OAuth referral flow: store ref code in localStorage before redirect, read it back after auth state change in `useAuth` or `Auth.tsx`
+- Discount validation is server-verified (query profiles table) not client-side
+- 25% discount applies to the calculated price in Checkout
 
