@@ -8,6 +8,7 @@ import { Settings } from "@/components/dashboard/Settings";
 import { TradingAccounts } from "@/components/dashboard/TradingAccounts";
 import { Competition } from "@/components/dashboard/Competition";
 import { Certificates } from "@/components/dashboard/Certificates";
+import { Referral } from "@/components/dashboard/Referral";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
@@ -43,6 +44,7 @@ export default function Dashboard() {
             <Route path="competition" element={<Competition />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="certificates" element={<Certificates />} />
+            <Route path="referral" element={<Referral />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </main>

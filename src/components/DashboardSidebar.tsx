@@ -10,6 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,7 @@ const menuItems = [
   { icon: Trophy, label: "Competition", path: "/dashboard/competition" },
   { icon: Wallet, label: "Wallet", path: "/dashboard/wallet" },
   { icon: Award, label: "Certificates", path: "/dashboard/certificates" },
+  { icon: Users, label: "Refer & Earn", path: "/dashboard/referral" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 

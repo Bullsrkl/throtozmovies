@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { CheckCircle, XCircle } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -15,18 +16,64 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referrerName, setReferrerName] = useState<string | null>(null);
+  const [referralError, setReferralError] = useState(false);
+  const [referralValidating, setReferralValidating] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (user) navigate("/dashboard");
   }, [user, navigate]);
 
+  // Auto-fill referral code from URL
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      setReferralCode(ref);
+      setIsSignUp(true);
+      validateReferralCode(ref);
+    }
+  }, [searchParams]);
+
+  const validateReferralCode = async (code: string) => {
+    if (!code.trim()) {
+      setReferrerName(null);
+      setReferralError(false);
+      return;
+    }
+    setReferralValidating(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("referral_code", code.trim())
+      .single();
+    if (data?.full_name) {
+      setReferrerName(data.full_name);
+      setReferralError(false);
+    } else {
+      setReferrerName(null);
+      setReferralError(true);
+    }
+    setReferralValidating(false);
+  };
+
   const handleGoogleSignIn = async () => {
     try {
+      // Store referral code for Google OAuth flow
+      if (referralCode.trim() && referrerName) {
+        localStorage.setItem("pending_referral_code", referralCode.trim());
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard` }
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: referralCode.trim() && referrerName ? {
+            referral_code: referralCode.trim()
+          } : undefined,
+        }
       });
       if (error) throw error;
     } catch (error: any) {
@@ -46,12 +93,16 @@ export default function Auth() {
         toast.success("Password reset link sent! Check your email.");
         setIsForgotPassword(false);
       } else if (isSignUp) {
+        const metadata: Record<string, string> = { full_name: fullName };
+        if (referralCode.trim() && referrerName) {
+          metadata.referral_code = referralCode.trim();
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: { full_name: fullName }
+            data: metadata,
           }
         });
         if (error) throw error;
@@ -132,6 +183,60 @@ export default function Auth() {
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="bg-card" />
               </div>
             )}
+
+            {/* Referral Code - Only on Signup */}
+            {isSignUp && !isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="referralCode">Referral Code (optional)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="referralCode"
+                    placeholder="e.g. THR1A2B3C"
+                    value={referralCode}
+                    onChange={(e) => {
+                      setReferralCode(e.target.value);
+                      setReferrerName(null);
+                      setReferralError(false);
+                    }}
+                    maxLength={20}
+                    className="bg-card"
+                    disabled={!!referrerName}
+                  />
+                  <Button
+                    type="button"
+                    variant={referrerName ? "outline" : "secondary"}
+                    className={referrerName ? "border-primary text-primary gap-1 shrink-0" : "shrink-0"}
+                    onClick={() => {
+                      if (referrerName) {
+                        setReferrerName(null);
+                        setReferralCode("");
+                        setReferralError(false);
+                      } else {
+                        validateReferralCode(referralCode);
+                      }
+                    }}
+                    disabled={!referralCode.trim() && !referrerName}
+                  >
+                    {referrerName ? (
+                      <><CheckCircle className="h-4 w-4" /> Valid</>
+                    ) : referralValidating ? "Checking..." : "Apply"}
+                  </Button>
+                </div>
+                {referrerName && (
+                  <p className="text-sm text-green-500 font-medium flex items-center gap-1">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Referred by: {referrerName}
+                  </p>
+                )}
+                {referralError && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <XCircle className="h-3.5 w-3.5" />
+                    Invalid referral code
+                  </p>
+                )}
+              </div>
+            )}
+
             <Button type="submit" className="w-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground" disabled={loading}>
               {loading ? "Loading..." : isForgotPassword ? "Send Reset Link" : isSignUp ? "Sign Up" : "Sign In"}
             </Button>

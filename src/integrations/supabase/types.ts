@@ -346,6 +346,7 @@ export type Database = {
           notify_withdrawals: boolean | null
           primary_upi_id: string | null
           referral_code: string | null
+          referred_by: string | null
           secondary_upi_id: string | null
           updated_at: string
           youtube_bonus_claimed: boolean | null
@@ -367,6 +368,7 @@ export type Database = {
           notify_withdrawals?: boolean | null
           primary_upi_id?: string | null
           referral_code?: string | null
+          referred_by?: string | null
           secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
@@ -388,11 +390,20 @@ export type Database = {
           notify_withdrawals?: boolean | null
           primary_upi_id?: string | null
           referral_code?: string | null
+          referred_by?: string | null
           secondary_upi_id?: string | null
           updated_at?: string
           youtube_bonus_claimed?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promotion_requests: {
         Row: {

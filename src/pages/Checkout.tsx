@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Upload, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { Copy, Upload, CheckCircle, ArrowLeft, Loader2, XCircle } from "lucide-react";
 
 const BASE_PRICES: Record<number, number> = {
   5000: 28,
@@ -43,7 +43,7 @@ export default function Checkout() {
 
   const size = Number(searchParams.get("size")) || 0;
   const type = searchParams.get("type") || "two_step";
-  const price = getPrice(size, type);
+  const basePrice = getPrice(size, type);
 
   const [usdtAddress, setUsdtAddress] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -51,7 +51,17 @@ export default function Checkout() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Discount state
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountReferrerName, setDiscountReferrerName] = useState<string | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [discountValidating, setDiscountValidating] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
+
+  const finalPrice = discountApplied
+    ? Math.round(basePrice * (1 - discountPercent / 100) * 100) / 100
+    : basePrice;
 
   useEffect(() => {
     if (!user) {
@@ -62,7 +72,6 @@ export default function Checkout() {
       navigate("/buy-challenge");
       return;
     }
-    // Fetch USDT address from platform_settings
     supabase
       .from("platform_settings")
       .select("value")
@@ -95,6 +104,56 @@ export default function Checkout() {
     setScreenshotFile(file);
   };
 
+  const validateDiscount = async () => {
+    if (!discountCode.trim() || !user) return;
+    setDiscountValidating(true);
+    setDiscountError(null);
+
+    try {
+      // Check if code exists as a referral code
+      const { data: referrer } = await supabase
+        .from("profiles")
+        .select("id, full_name, referral_code")
+        .eq("referral_code", discountCode.trim())
+        .single();
+
+      if (!referrer) {
+        setDiscountError("Invalid discount code");
+        setDiscountValidating(false);
+        return;
+      }
+
+      // Don't allow using own code
+      if (referrer.id === user.id) {
+        setDiscountError("You cannot use your own referral code");
+        setDiscountValidating(false);
+        return;
+      }
+
+      // Check if user has any previous purchases
+      const { count } = await supabase
+        .from("challenge_purchases")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if (count && count > 0) {
+        setDiscountError("Discount only valid for your first purchase");
+        setDiscountValidating(false);
+        return;
+      }
+
+      // Valid!
+      setDiscountApplied(true);
+      setDiscountReferrerName(referrer.full_name || "Unknown");
+      setDiscountPercent(25);
+      setDiscountError(null);
+    } catch {
+      setDiscountError("Failed to validate code");
+    } finally {
+      setDiscountValidating(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     if (!transactionId.trim()) {
@@ -108,7 +167,6 @@ export default function Checkout() {
 
     setSubmitting(true);
     try {
-      // 1. Find matching challenge plan
       const { data: plan, error: planError } = await supabase
         .from("challenge_plans")
         .select("id")
@@ -122,7 +180,6 @@ export default function Checkout() {
         return;
       }
 
-      // 2. Upload screenshot
       const ext = screenshotFile.name.split(".").pop();
       const filePath = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
@@ -139,7 +196,6 @@ export default function Checkout() {
         .from("payment-screenshots")
         .getPublicUrl(filePath);
 
-      // 3. Create purchase record
       const { error: insertError } = await supabase
         .from("challenge_purchases")
         .insert({
@@ -148,7 +204,7 @@ export default function Checkout() {
           status: "payment_submitted",
           transaction_id: transactionId.trim(),
           payment_screenshot_url: urlData.publicUrl,
-          discount_code: discountCode.trim() || null,
+          discount_code: discountApplied ? discountCode.trim() : null,
         });
 
       if (insertError) {
@@ -190,9 +246,20 @@ export default function Checkout() {
               <span className="text-muted-foreground">Account Size</span>
               <span className="font-medium">${size.toLocaleString()}</span>
             </div>
+            {discountApplied && (
+              <div className="flex justify-between text-green-500">
+                <span>Discount (25%)</span>
+                <span>-${(basePrice - finalPrice).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-border pt-2 mt-2">
               <span className="text-muted-foreground font-semibold">Total</span>
-              <span className="text-xl font-display font-bold text-primary">${price} USDT</span>
+              <div className="text-right">
+                {discountApplied && (
+                  <span className="text-sm text-muted-foreground line-through mr-2">${basePrice}</span>
+                )}
+                <span className="text-xl font-display font-bold text-primary">${finalPrice} USDT</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -213,19 +280,13 @@ export default function Checkout() {
                 <code className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-xs break-all font-mono">
                   {usdtAddress || "Loading..."}
                 </code>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={copyAddress}
-                  className="shrink-0"
-                  disabled={!usdtAddress}
-                >
+                <Button size="icon" variant="outline" onClick={copyAddress} className="shrink-0" disabled={!usdtAddress}>
                   {copied ? <CheckCircle className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Send exactly <span className="text-primary font-semibold">${price} USDT</span> to the above address via BEP20 network. After sending, fill in the details below.
+              Send exactly <span className="text-primary font-semibold">${finalPrice} USDT</span> to the above address via BEP20 network.
             </p>
           </CardContent>
         </Card>
@@ -238,23 +299,13 @@ export default function Checkout() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="txn-id">Transaction ID / Hash *</Label>
-              <Input
-                id="txn-id"
-                placeholder="e.g. 0x1a2b3c..."
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                maxLength={200}
-                className="mt-1"
-              />
+              <Input id="txn-id" placeholder="e.g. 0x1a2b3c..." value={transactionId} onChange={(e) => setTransactionId(e.target.value)} maxLength={200} className="mt-1" />
             </div>
 
             <div>
               <Label htmlFor="screenshot">Payment Screenshot *</Label>
               <div className="mt-1">
-                <label
-                  htmlFor="screenshot"
-                  className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
-                >
+                <label htmlFor="screenshot" className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
                   {screenshotFile ? (
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-primary" />
@@ -267,18 +318,12 @@ export default function Checkout() {
                     </>
                   )}
                 </label>
-                <input
-                  id="screenshot"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
+                <input id="screenshot" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="discount">Discount Code (optional)</Label>
+              <Label htmlFor="discount">Discount / Referral Code (optional)</Label>
               <div className="flex items-center gap-2 mt-1">
                 <Input
                   id="discount"
@@ -287,6 +332,9 @@ export default function Checkout() {
                   onChange={(e) => {
                     setDiscountCode(e.target.value);
                     setDiscountApplied(false);
+                    setDiscountReferrerName(null);
+                    setDiscountError(null);
+                    setDiscountPercent(0);
                   }}
                   maxLength={50}
                   disabled={discountApplied}
@@ -299,19 +347,31 @@ export default function Checkout() {
                     if (discountApplied) {
                       setDiscountApplied(false);
                       setDiscountCode("");
-                    } else if (discountCode.trim()) {
-                      setDiscountApplied(true);
+                      setDiscountReferrerName(null);
+                      setDiscountPercent(0);
+                    } else {
+                      validateDiscount();
                     }
                   }}
-                  disabled={!discountCode.trim() && !discountApplied}
+                  disabled={(!discountCode.trim() && !discountApplied) || discountValidating}
                 >
                   {discountApplied ? (
                     <><CheckCircle className="h-4 w-4" /> Applied</>
-                  ) : (
-                    "Apply"
-                  )}
+                  ) : discountValidating ? "Checking..." : "Apply"}
                 </Button>
               </div>
+              {discountReferrerName && (
+                <p className="text-sm text-green-500 font-medium flex items-center gap-1 mt-1">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Referred by: {discountReferrerName} — 25% off!
+                </p>
+              )}
+              {discountError && (
+                <p className="text-sm text-destructive flex items-center gap-1 mt-1">
+                  <XCircle className="h-3.5 w-3.5" />
+                  {discountError}
+                </p>
+              )}
             </div>
 
             <Button
@@ -320,9 +380,7 @@ export default function Checkout() {
               disabled={submitting || !transactionId.trim() || !screenshotFile}
             >
               {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
-                </>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</>
               ) : (
                 "Submit Payment"
               )}
