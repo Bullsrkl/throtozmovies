@@ -44,6 +44,7 @@ export default function Dashboard() {
             <Route path="competition" element={<Competition />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="certificates" element={<Certificates />} />
+            <Route path="referral" element={<Referral />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
