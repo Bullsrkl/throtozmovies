@@ -8,6 +8,7 @@ import { Settings } from "@/components/dashboard/Settings";
 import { TradingAccounts } from "@/components/dashboard/TradingAccounts";
 import { Competition } from "@/components/dashboard/Competition";
 import { Certificates } from "@/components/dashboard/Certificates";
+import { Referral } from "@/components/dashboard/Referral";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
