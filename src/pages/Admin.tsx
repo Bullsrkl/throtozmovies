@@ -196,6 +196,7 @@ export default function Admin() {
                         <TableHead>User</TableHead>
                         <TableHead>Plan</TableHead>
                         <TableHead>Amount</TableHead>
+                        <TableHead>Discount</TableHead>
                         <TableHead>Tx ID</TableHead>
                         <TableHead>Screenshot</TableHead>
                         <TableHead>Actions</TableHead>
