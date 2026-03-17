@@ -90,7 +90,6 @@ export function Wallet() {
         amount: withdrawalAmount,
         platform_fee: 0,
         net_amount: withdrawalAmount,
-        upi_id: "N/A",
         usdt_address: usdtAddress,
         network: network,
         status: "pending",

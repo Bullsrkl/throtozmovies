@@ -91,6 +91,9 @@ export const Header = () => {
                   <Link to="/dashboard/certificates">Certificates</Link>
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" asChild onClick={() => setMobileOpen(false)}>
+                  <Link to="/dashboard/referral">Refer & Earn</Link>
+                </Button>
+                <Button variant="ghost" className="w-full justify-start" asChild onClick={() => setMobileOpen(false)}>
                   <Link to="/dashboard/settings">Settings</Link>
                 </Button>
                 {isAdmin && (

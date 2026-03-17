@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
+import { NavLink } from "@/components/NavLink";
 import { Header } from "@/components/Header";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Overview } from "@/components/dashboard/Overview";

@@ -25,7 +25,40 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    if (user) navigate("/dashboard");
+    if (!user) return;
+    // Process pending Google OAuth referral
+    const pendingRef = localStorage.getItem("pending_referral_code");
+    if (pendingRef) {
+      localStorage.removeItem("pending_referral_code");
+      (async () => {
+        const { data: referrer } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("referral_code", pendingRef)
+          .single();
+        if (referrer && referrer.id !== user.id) {
+          // Check if already linked
+          const { data: myProfile } = await supabase
+            .from("profiles")
+            .select("referred_by")
+            .eq("id", user.id)
+            .single();
+          if (myProfile && !myProfile.referred_by) {
+            await supabase
+              .from("profiles")
+              .update({ referred_by: referrer.id })
+              .eq("id", user.id);
+            await supabase.from("referrals").insert({
+              referrer_id: referrer.id,
+              referred_id: user.id,
+              referral_code: pendingRef,
+              status: "pending",
+            });
+          }
+        }
+      })();
+    }
+    navigate("/dashboard");
   }, [user, navigate]);
 
   // Auto-fill referral code from URL

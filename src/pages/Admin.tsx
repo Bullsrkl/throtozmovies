@@ -212,7 +212,17 @@ export default function Admin() {
                           <TableCell>
                             ${p.challenge_plans?.account_size?.toLocaleString()} - {p.challenge_plans?.challenge_type?.replace("_", "-")}
                           </TableCell>
-                          <TableCell className="font-semibold">${p.challenge_plans?.price_usd}</TableCell>
+                          <TableCell className="font-semibold">
+                            ${p.challenge_plans?.price_usd}
+                            {p.discount_code && (
+                              <span className="block text-xs text-green-500">After 25% off: ${(p.challenge_plans?.price_usd * 0.75).toFixed(2)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {p.discount_code ? (
+                              <Badge className="bg-green-500/10 text-green-500 text-xs">{p.discount_code}</Badge>
+                            ) : <span className="text-muted-foreground text-xs">—</span>}
+                          </TableCell>
                           <TableCell className="font-mono text-xs max-w-[150px] truncate">{p.transaction_id || "N/A"}</TableCell>
                           <TableCell>
                             {p.payment_screenshot_url ? (
