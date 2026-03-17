@@ -32,9 +32,35 @@ export default function Dashboard() {
 
   if (!user) return null;
 
+  const mobileMenuItems = [
+    { label: "Overview", path: "/dashboard", end: true },
+    { label: "Accounts", path: "/dashboard/accounts" },
+    { label: "Competition", path: "/dashboard/competition" },
+    { label: "Wallet", path: "/dashboard/wallet" },
+    { label: "Certificates", path: "/dashboard/certificates" },
+    { label: "Refer & Earn", path: "/dashboard/referral" },
+    { label: "Settings", path: "/dashboard/settings" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      {/* Mobile nav */}
+      <div className="md:hidden overflow-x-auto border-b border-border bg-card">
+        <div className="flex gap-1 p-2 min-w-max">
+          {mobileMenuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.end}
+              className="px-3 py-1.5 text-sm rounded-full whitespace-nowrap text-muted-foreground hover:bg-accent"
+              activeClassName="bg-primary/10 text-primary font-medium"
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      </div>
       <div className="flex w-full">
         <DashboardSidebar className="hidden md:block" />
         <main className="flex-1 p-6 md:p-8">
