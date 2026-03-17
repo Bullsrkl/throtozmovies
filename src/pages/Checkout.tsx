@@ -130,11 +130,12 @@ export default function Checkout() {
         return;
       }
 
-      // Check if user has any previous purchases
+      // Check if user has any previous non-rejected purchases
       const { count } = await supabase
         .from("challenge_purchases")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .not("status", "eq", "rejected");
 
       if (count && count > 0) {
         setDiscountError("Discount only valid for your first purchase");
