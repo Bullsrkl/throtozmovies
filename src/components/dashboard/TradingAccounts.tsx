@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  Clock,
 } from "lucide-react";
 
 interface ChallengePlan {
