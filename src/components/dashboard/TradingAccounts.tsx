@@ -53,15 +53,43 @@ interface TradingAccount {
   };
 }
 
+interface PendingPurchase {
+  id: string;
+  status: string;
+  created_at: string;
+  discount_code: string | null;
+  challenge_plans: {
+    account_size: number;
+    challenge_type: string;
+    price_usd: number;
+  };
+}
+
 export function TradingAccounts() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [pendingPurchases, setPendingPurchases] = useState<PendingPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user) fetchAccounts();
+    if (user) {
+      fetchAccounts();
+      fetchPendingPurchases();
+
+      // Realtime subscription for purchase status updates
+      const channel = supabase
+        .channel('purchase-status')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'challenge_purchases', filter: `user_id=eq.${user.id}` },
+          () => { fetchPendingPurchases(); fetchAccounts(); }
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [user]);
 
   const fetchAccounts = async () => {
@@ -72,6 +100,16 @@ export function TradingAccounts() {
       .order("created_at", { ascending: false });
     setAccounts((data as unknown as TradingAccount[]) || []);
     setLoading(false);
+  };
+
+  const fetchPendingPurchases = async () => {
+    const { data } = await supabase
+      .from("challenge_purchases")
+      .select("id, status, created_at, discount_code, challenge_plans!inner(account_size, challenge_type, price_usd)")
+      .eq("user_id", user!.id)
+      .in("status", ["pending_payment", "payment_submitted"])
+      .order("created_at", { ascending: false });
+    setPendingPurchases((data as unknown as PendingPurchase[]) || []);
   };
 
   const selectedAccount = accounts.find((a) => a.id === selectedId);
