@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Upload, CheckCircle, ArrowLeft, Loader2, XCircle, Clock, QrCode } from "lucide-react";
+import { Copy, Upload, CheckCircle, ArrowLeft, Loader2, XCircle, Clock } from "lucide-react";
 
 const BASE_PRICES: Record<number, number> = {
   5000: 28,
@@ -180,9 +180,6 @@ export default function Checkout() {
 
   if (!size || !BASE_PRICES[size]) return null;
 
-  const qrUrl = usdtAddress
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(usdtAddress)}`
-    : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -329,29 +326,15 @@ export default function Checkout() {
               {formatTime(timeLeft)}
             </div>
 
-            {/* QR Code */}
-            <div className="flex flex-col items-center gap-3">
-              {qrUrl ? (
-                <img src={qrUrl} alt="Payment QR Code" className="w-48 h-48 rounded-lg border border-border bg-white p-2" />
-              ) : (
-                <div className="w-48 h-48 rounded-lg border border-border bg-muted flex items-center justify-center">
-                  <QrCode className="h-12 w-12 text-muted-foreground" />
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground text-center">
-                Scan to get the deposit address
-              </p>
-            </div>
-
-            {/* Address + Copy */}
+            {/* USDT Address — Large Display */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">USDT Address (BEP20)</Label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-muted rounded-md px-3 py-2 text-xs break-all font-mono">
+              <Label className="text-xs text-muted-foreground mb-2 block">USDT Deposit Address (BEP20)</Label>
+              <div className="flex items-center gap-2 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
+                <code className="flex-1 text-sm font-mono font-semibold break-all leading-relaxed">
                   {usdtAddress}
                 </code>
-                <Button size="icon" variant="outline" onClick={copyAddress} className="shrink-0 h-8 w-8">
-                  {copied ? <CheckCircle className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                <Button size="sm" variant="outline" onClick={copyAddress} className="shrink-0 gap-1.5 border-primary/30">
+                  {copied ? <><CheckCircle className="h-4 w-4 text-primary" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
                 </Button>
               </div>
             </div>

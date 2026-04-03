@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  Clock,
 } from "lucide-react";
 
 interface ChallengePlan {
@@ -53,15 +54,43 @@ interface TradingAccount {
   };
 }
 
+interface PendingPurchase {
+  id: string;
+  status: string;
+  created_at: string;
+  discount_code: string | null;
+  challenge_plans: {
+    account_size: number;
+    challenge_type: string;
+    price_usd: number;
+  };
+}
+
 export function TradingAccounts() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [pendingPurchases, setPendingPurchases] = useState<PendingPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user) fetchAccounts();
+    if (user) {
+      fetchAccounts();
+      fetchPendingPurchases();
+
+      // Realtime subscription for purchase status updates
+      const channel = supabase
+        .channel('purchase-status')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'challenge_purchases', filter: `user_id=eq.${user.id}` },
+          () => { fetchPendingPurchases(); fetchAccounts(); }
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [user]);
 
   const fetchAccounts = async () => {
@@ -72,6 +101,16 @@ export function TradingAccounts() {
       .order("created_at", { ascending: false });
     setAccounts((data as unknown as TradingAccount[]) || []);
     setLoading(false);
+  };
+
+  const fetchPendingPurchases = async () => {
+    const { data } = await supabase
+      .from("challenge_purchases")
+      .select("id, status, created_at, discount_code, challenge_plans!inner(account_size, challenge_type, price_usd)")
+      .eq("user_id", user!.id)
+      .in("status", ["pending_payment", "payment_submitted"])
+      .order("created_at", { ascending: false });
+    setPendingPurchases((data as unknown as PendingPurchase[]) || []);
   };
 
   const selectedAccount = accounts.find((a) => a.id === selectedId);
@@ -351,6 +390,22 @@ export function TradingAccounts() {
     );
   }
 
+  const purchaseStatusLabel = (status: string) => {
+    if (status === "payment_submitted") return "Payment Submitted — Under Review";
+    return "Pending Payment";
+  };
+
+  const purchaseStatusColor = (status: string) => {
+    if (status === "payment_submitted") return "bg-yellow-500/10 text-yellow-500 border-yellow-500/30";
+    return "bg-orange-500/10 text-orange-500 border-orange-500/30";
+  };
+
+  const challengeTypeLabel = (t: string) => {
+    if (t === "two_step") return "2-Step Challenge";
+    if (t === "one_step") return "1-Step Challenge";
+    return "Instant Funding";
+  };
+
   // ── List View ──
   return (
     <div className="space-y-6">
@@ -359,7 +414,34 @@ export function TradingAccounts() {
         <p className="text-muted-foreground">Track your evaluation progress</p>
       </div>
 
-      {accounts.length === 0 ? (
+      {/* Pending Purchases */}
+      {pendingPurchases.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Pending Orders</h2>
+          {pendingPurchases.map((p) => (
+            <Card key={p.id} className="border-border border-dashed">
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <p className="font-display font-bold">${p.challenge_plans.account_size.toLocaleString()} — {challengeTypeLabel(p.challenge_plans.challenge_type)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Submitted {new Date(p.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <Badge className={`${purchaseStatusColor(p.status)} animate-pulse`}>
+                  {purchaseStatusLabel(p.status)}
+                </Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {accounts.length === 0 && pendingPurchases.length === 0 ? (
         <Card className="border-border">
           <CardContent className="flex flex-col items-center py-12 space-y-3">
             <BarChart3 className="h-12 w-12 text-muted-foreground" />
@@ -367,7 +449,7 @@ export function TradingAccounts() {
             <p className="text-muted-foreground text-sm">Purchase a challenge to get started.</p>
           </CardContent>
         </Card>
-      ) : (
+      ) : accounts.length > 0 && (
         <div className="grid gap-4">
           {accounts.map((acc) => (
             <Card
