@@ -1,64 +1,37 @@
 
 
-# Plan: Redesign Checkout Page — Payment Popup with QR, Timer & Invoice
+# Plan: Pending Purchases in Trading Accounts + Buy Challenge UI Redesign + Remove QR from Popup
 
-## New Flow
+## 3 Changes
 
-**Page layout (top to bottom):**
-1. Back button
-2. Order Summary card (challenge type, size, discount code field with Apply button)
-3. Invoice-style summary showing final amount after discount
-4. Payment info card (USDT address, network, amount)
-5. **"Buy Now" button** — opens the payment popup
+### 1. Show Pending Purchases in Trading Accounts Page
+Currently, after a user submits payment, they go to dashboard but see nothing until admin creates the trading account. We need to show pending/submitted purchases as cards at the top of the Trading Accounts list.
 
-**Payment Popup (Dialog):**
-- X close button (top-right, already in Dialog component)
-- Payment address with copy button
-- QR code generated from the USDT address (using `qrcode` library or a QR API like `https://api.qrserver.com/v1/create-qr-code/`)
-- 30-minute countdown timer (MM:SS format, red when < 5 min)
-- Transaction ID input field
-- Screenshot upload field
-- "Done" button to submit
+**In `TradingAccounts.tsx`:**
+- Fetch `challenge_purchases` where status is `pending_payment` or `payment_submitted`, joined with `challenge_plans` for size/type info
+- Show these as separate cards above the active accounts list, with a pulsing status badge ("Payment Submitted — Under Review" / "Pending Payment")
+- Each card shows: challenge type, account size, submission date, status
+- Use realtime subscription on `challenge_purchases` table so status updates appear live without refresh
 
-When user clicks Done → same submit logic as current `handleSubmit`, then closes popup and redirects to dashboard.
+### 2. Redesign Buy Challenge Page (`BuyChallenge.tsx`)
+Replace the current grid-of-cards layout with a more interactive design:
+- **Horizontal slider/selector** for account sizes at the top (pill buttons showing $5K, $10K, $30K, etc.)
+- **Single large feature card** in the center showing the selected size's details, price, and features
+- **Challenge type toggle** (2-Step / 1-Step / Instant) as tabs above the feature card
+- Glassmorphic card with gradient border for the selected plan
+- Prominent price display with "Buy Challenge" CTA button
+- Comparison table below showing all rules (profit target, drawdown, min days) for the selected type
 
-## Changes
-
-### 1. Install QR dependency or use API
-Use `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={address}` — no install needed, just an `<img>` tag.
-
-### 2. Rewrite `Checkout.tsx`
-
-**Top section stays:** Order Summary + Discount code field with Apply button + Invoice summary showing:
-- Original price (if discounted, shown with strikethrough)
-- Discount amount
-- **Amount to Pay** (bold, highlighted)
-
-**Remove:** The current inline payment details form (txn ID, screenshot, submit button)
-
-**Add:** A prominent "Buy Now" button below the invoice
-
-**Add:** A `Dialog` popup triggered by "Buy Now" containing:
-- Payment address + copy button
-- QR code image (from API using usdtAddress)
-- Amount to send reminder
-- 30-min countdown timer using `useEffect` + `setInterval`
-- Transaction ID input
-- Screenshot upload
-- "Done" button (calls handleSubmit)
-
-### 3. Timer Logic
-```
-const [timeLeft, setTimeLeft] = useState(30 * 60) // 30 min in seconds
-useEffect interval that decrements every second when popup is open
-Display as MM:SS
-When reaches 0, auto-close popup with toast "Payment session expired"
-```
+### 3. Remove QR Code from Payment Popup, Enlarge USDT Address
+**In `Checkout.tsx` popup:**
+- Remove the QR code image and the "Scan to get the deposit address" text (lines 333-344)
+- Make the USDT address prominently large: bigger font size (`text-base` or `text-sm` instead of `text-xs`), styled in a highlighted box with primary border
+- Keep the copy button next to it
+- Remove the `QrCode` import from lucide
 
 ## Technical Details
-- Uses existing `Dialog` component from `src/components/ui/dialog.tsx`
-- QR generated via free API: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={encodedAddress}`
-- No new dependencies needed
-- Timer resets each time popup opens
-- Submit logic unchanged — same Supabase insert + storage upload
+- Pending purchases query: `supabase.from("challenge_purchases").select("*, challenge_plans!inner(*)").eq("user_id", user.id).in("status", ["pending_payment", "payment_submitted"])`
+- Realtime: subscribe to `postgres_changes` on `challenge_purchases` filtered by user_id
+- No database changes needed — all data already exists
+- BuyChallenge redesign is purely UI — same navigation logic and pricing functions
 
