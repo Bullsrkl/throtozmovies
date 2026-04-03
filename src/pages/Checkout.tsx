@@ -180,9 +180,6 @@ export default function Checkout() {
 
   if (!size || !BASE_PRICES[size]) return null;
 
-  const qrUrl = usdtAddress
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(usdtAddress)}`
-    : "";
 
   return (
     <div className="min-h-screen bg-background">
