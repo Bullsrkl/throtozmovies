@@ -2,61 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Creamy Prop Gym Theme — All colors HSL */
 
 @layer base {
   :root {
-    /* Prop Gym Dark Fintech Theme */
-    --background: 220 20% 4%; /* Deep dark #0A0D12 */
-    --foreground: 210 20% 92%;
+    --background: 35 40% 96%;
+    --foreground: 30 20% 15%;
 
-    --card: 220 18% 8%; /* Card surface #111621 */
-    --card-foreground: 210 20% 92%;
+    --card: 35 30% 92%;
+    --card-foreground: 30 20% 15%;
 
-    --popover: 220 18% 8%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 35 30% 92%;
+    --popover-foreground: 30 20% 15%;
 
-    /* Teal/Cyan primary accent */
-    --primary: 168 80% 45%; /* Teal #17B897 */
-    --primary-light: 168 65% 55%; /* Lighter teal #3DCFAE */
-    --primary-foreground: 220 20% 4%;
+    /* Teal primary accent (deeper for cream contrast) */
+    --primary: 168 80% 38%;
+    --primary-light: 168 65% 48%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Light green premium gradient (keep) */
-    --premium: 158 79% 66%;
-    --premium-light: 158 58% 51%;
-    --premium-foreground: 220 20% 4%;
+    /* Premium green */
+    --premium: 158 79% 40%;
+    --premium-light: 158 58% 48%;
+    --premium-foreground: 0 0% 100%;
 
-    /* Golden admin gradient (keep) */
+    /* Golden admin */
     --admin: 43 63% 52%;
     --admin-light: 44 100% 67%;
-    --admin-foreground: 220 20% 4%;
+    --admin-foreground: 30 20% 15%;
 
-    --secondary: 220 18% 12%;
-    --secondary-foreground: 210 20% 92%;
+    --secondary: 35 20% 90%;
+    --secondary-foreground: 30 20% 15%;
 
-    --muted: 220 14% 16%;
-    --muted-foreground: 220 10% 58%;
+    --muted: 35 15% 88%;
+    --muted-foreground: 30 10% 45%;
 
-    --accent: 220 18% 14%;
-    --accent-foreground: 210 20% 92%;
+    --accent: 35 25% 88%;
+    --accent-foreground: 30 20% 15%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 92%;
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 18%;
-    --input: 220 14% 16%;
-    --ring: 168 80% 45%;
+    --border: 35 20% 85%;
+    --input: 35 15% 88%;
+    --ring: 168 80% 38%;
 
     --radius: 1rem;
 
-    /* Shadows */
-    --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.5);
-    --shadow-elevated: 0 12px 48px -8px rgba(0, 0, 0, 0.6);
+    /* Warm shadows */
+    --shadow-card: 0 4px 24px -4px rgba(139, 119, 91, 0.08);
+    --shadow-elevated: 0 12px 48px -8px rgba(139, 119, 91, 0.12);
     
-    /* Glass effect */
-    --glass-bg: rgba(17, 22, 33, 0.7);
+    /* Creamy glass effect */
+    --glass-bg: rgba(255, 248, 235, 0.85);
     --glass-border: rgba(23, 184, 151, 0.15);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -71,4 +68,46 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Cream interactive effects */
+@layer utilities {
+  .cream-hover {
+    @apply transition-all duration-300;
+  }
+  .cream-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px -8px rgba(139, 119, 91, 0.15), 0 0 0 1px rgba(23, 184, 151, 0.08);
+  }
+
+  .cream-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  .cream-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), rgba(255, 243, 220, 0.5) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .cream-ripple:active::after {
+    opacity: 1;
+  }
+
+  .cream-glow {
+    animation: cream-glow-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes cream-glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(139, 119, 91, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(139, 119, 91, 0.2); }
+}
+
+@keyframes cream-slide {
+  0% { transform: translateX(-10px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
 }
