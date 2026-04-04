@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, LogOut, Menu, X } from "lucide-react";
+import { ShoppingCart, User, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -21,14 +21,21 @@ export const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <Link to="/" className="flex items-center">
-            <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-              Prop Gym
-            </h1>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-primary/20 shadow-card">
+              {/* Dumbbell/chart icon */}
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-primary">
+                <path d="M6.5 6.5h11v3h-11z" fill="currentColor" opacity="0.3"/>
+                <path d="M3 12h3v8H3zM18 12h3v8h-3zM6 6a2 2 0 012-2h8a2 2 0 012 2v4H6V6zM8 10v10M16 10v10M6 14h12M6 18h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <span className="text-2xl md:text-3xl font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
+                Prop Gym
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" className="cream-ripple" asChild>
               <Link to="/buy-challenge">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Buy Challenge
@@ -41,23 +48,23 @@ export const Header = () => {
                     <Link to="/admin">Admin Panel</Link>
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="cream-ripple" asChild>
                   <Link to="/dashboard">
                     <User className="h-4 w-4 mr-2" />
                     Dashboard
                   </Link>
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <Button variant="ghost" size="sm" className="cream-ripple" onClick={handleLogout}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="cream-ripple" asChild>
                   <Link to="/auth">Login</Link>
                 </Button>
-                <Button size="sm" className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground" asChild>
+                <Button size="sm" className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground cream-ripple" asChild>
                   <Link to="/auth">Sign Up</Link>
                 </Button>
               </>
