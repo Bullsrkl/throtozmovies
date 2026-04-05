@@ -1,116 +1,108 @@
 
 
-# Plan: Creamy Theme + Rules Section + Hero Redesign + Logo Branding
+# Plan: Complete Overhaul — Theme, Rules Page, Wallet Redesign, Admin Sidebar, Reports
 
-## Overview
+## Summary of All Changes
 
-Transform the entire app from dark fintech theme to a **creamy/warm** palette. Add platform rules section on the home page, redesign the hero banner with a creamy card, and make the "Prop Gym" logo professional and dynamic.
+### 1. Theme: Darker Creamy Background + Gradient Cards
+**Files:** `src/index.css`, `tailwind.config.ts`
+- Darken background from `35 40% 96%` to `30 25% 88%` (warm mocha cream)
+- Keep cards lighter `35 35% 94%` for contrast against darker bg
+- Add soft gradient backgrounds to cards: `bg-gradient-to-br from-card to-primary/3`
+- Add hero banner floating animations (CSS keyframes: float-up-down, shimmer)
+- Cards get subtle gradient borders visible on hover
 
-## Changes
+### 2. Separate Rules Page + 30% Consistency Rule
+**Files:** New `src/pages/Rules.tsx`, `src/App.tsx`, `src/components/Header.tsx`, `src/components/HeroBanner.tsx`
 
-### 1. Creamy Theme Overhaul (`src/index.css`)
+- Create `/rules` route with dedicated Rules page
+- Move `PlatformRules` content to this new page and expand it
+- Add **30% Consistency Rule** section under Instant accounts with full explanation:
+  - Formula, examples (violation + valid case), adjustment example
+  - Clarify it applies only at withdrawal time, not account breach
+- Add detailed rules per account type: profit targets, drawdown, min days, payout eligibility, estimated balance maintenance
+- Add "Rules" link to hamburger menu (mobile) and desktop nav
+- Hero banner "Rules" button navigates to `/rules` instead of scrolling
+- On Index page, keep a brief rules preview with "View All Rules" link
 
-Replace the dark HSL palette with a warm cream-based palette:
+### 3. Hero Banner Animations
+**File:** `src/components/HeroBanner.tsx`, `src/index.css`
+- Add floating animation to the dashboard preview card (right side)
+- Add shimmer/pulse effect on the "Get Funded" button
+- Subtle particle-like floating dots in background using CSS pseudo-elements
 
-```text
-Background:     35 40% 96%   (warm cream white)
-Card:           35 30% 92%   (soft cream card)
-Foreground:     30 20% 15%   (dark brown text)
-Primary:        168 80% 38%  (teal — kept but slightly deeper for cream contrast)
-Primary-light:  168 65% 48%
-Border:         35 20% 85%   (warm beige border)
-Muted:          35 15% 88%   (light cream muted)
-Muted-fg:       30 10% 45%   (warm gray text)
-Secondary:      35 20% 90%
-Accent:         35 25% 88%
-Shadows:        warm-toned rgba(139, 119, 91, 0.08) instead of black
-Glass-bg:       rgba(255, 248, 235, 0.85) (creamy glass)
-```
+### 4. Buy Challenge Cards — Gradient Colors
+**File:** `src/pages/BuyChallenge.tsx`
+- Add soft gradient backgrounds to the main feature card and size pills
+- Each challenge type gets a subtle unique gradient: 2-Step (teal-blue), 1-Step (teal-green), Instant (amber-teal)
+- Add `cream-hover` effects with gradient border glow
 
-Add CSS utility classes for cream touch/click effects:
-- `.cream-ripple` — on click/touch, a soft cream-colored radial ripple animation
-- `.cream-hover` — on hover, card lifts with warm shadow and slight cream glow
+### 5. Wallet Complete Redesign
+**File:** `src/components/dashboard/Wallet.tsx`
 
-### 2. Cream Touch/Click Effects (`src/index.css` + `tailwind.config.ts`)
+**Account Dropdown (top):**
+- Add dropdown selector above balance cards to pick which active trading account's wallet to view
+- Fetch user's active `trading_accounts` with join to `challenge_plans` for size/type
+- Show balance for selected account
 
-Add new keyframes in tailwind config:
-- `cream-ripple` — scale + fade radial animation
-- `cream-slide` — smooth slide with cream trail effect
-- `cream-glow` — subtle warm glow pulse
+**Eligible Withdrawal Amount:**
+- Show "Eligible for Withdrawal" amount (balance above initial account size = profit)
+- Add a progress bar showing how close user is to withdrawal criteria
 
-Add a global CSS class using `::after` pseudo-element for interactive cream ripple on cards and buttons.
+**Withdrawal Form Updates:**
+- Add more networks: BEP20, ERC20, TRC20, Polygon, Arbitrum, Solana
+- After filling amount/address/network and clicking Payout, show **confirmation popup (Dialog):**
+  - Amount, platform fee (if any), net amount, destination address, network, date/time, transaction reference ID
+  - "Confirm" and "Cancel" buttons
 
-### 3. Hero Banner Redesign (`src/components/HeroBanner.tsx`)
+**Left-side Withdrawal History Tab:**
+- Split wallet into two-column layout: left = withdrawal history list, right = main content
+- On mobile: tabs (Wallet | History)
+- Each history item clickable → shows detail view with transaction ID, status icon (pending=clock, paid=checkmark, rejected=x), dates
+- **Report button** on each rejected/disputed entry: opens text area for user to write queries → saved to new `withdrawal_reports` table
 
-- Wrap the hero text inside a **creamy frosted-glass card** with warm border, rounded corners, subtle shadow
-- Background gradients changed from teal/dark to warm cream tones with teal accents
-- The text stays inside this creamy card banner
-- "View Plans" button renamed to **"Rules"**
-- On click, scrolls to the new rules section (id: `rules-section`)
+### 6. Database Migration
+- Create `withdrawal_reports` table:
+  - `id` uuid PK, `withdrawal_id` uuid, `user_id` uuid, `message` text, `status` text default 'open', `admin_response` text nullable, `created_at` timestamptz, `resolved_at` timestamptz nullable
+- RLS: users can SELECT/INSERT own reports, admin can ALL
+- Add more network options — no schema change needed (network is text field)
 
-### 4. Platform Rules Section — New Export in `HeroBanner.tsx`
+### 7. Admin Panel — Sidebar Layout + Reports Tab
+**File:** `src/pages/Admin.tsx`
 
-Create a new `PlatformRules` component with comprehensive rules fetched from `challenge_plans` table:
+- Replace top tabs with a **left sidebar** (hamburger-collapsible on mobile)
+- Sidebar items: Dashboard Stats, Payments Review, Withdrawals, Users, Reports, System Settings
+- Withdrawals tab: add copy button for USDT address, show Paid/Reject buttons
+- **New Reports tab:** 
+  - Show all `withdrawal_reports` with user info, withdrawal details, message
+  - Admin can write response and mark as "Resolved"
+  - Show report count, withdrawal transaction details
 
-- **Section heading**: "Platform Rules & Guidelines"
-- **Tabs or accordion** by challenge type (1-Step, 2-Step, Instant)
-- For each type, a table/grid showing:
-  - Account sizes available
-  - Profit Target Phase 1 & Phase 2
-  - Daily Drawdown Limit
-  - Overall Drawdown Limit
-  - Minimum Trading Days
-  - Price
-- **General Rules section** below with static content:
-  - Payout rules: "First payout after 14 calendar days, then on-demand every 7 days"
-  - Payout split: "Up to 90% profit split"
-  - Platform: "MetaTrader 5"
-  - Restrictions: "No martingale, no HFT, no copy trading between accounts"
-  - Scaling: "Account scaling available after 3 consecutive profitable months"
-  - Refund policy: "No refunds after evaluation begins"
-
-Add `<PlatformRules />` to `Index.tsx` between Features and HowItWorks (or replacing HowItWorks position).
-
-### 5. Logo Redesign (`src/components/Header.tsx` + footer)
-
-- "Prop Gym" text in a **branded label/badge**: a rounded pill/tag with creamy background, teal border, bold Space Grotesk font
-- Add a small inline SVG icon (dumbbell/chart hybrid) before the text
-- Make it larger (`text-2xl` -> `text-3xl`), bolder, with a subtle shadow
-- Same treatment in footer
-
-### 6. Update All Cards & Interactive Elements
-
-Apply `cream-hover` class to all cards in:
-- `HeroBanner.tsx` (FundingModels cards, Features cards)
-- `BuyChallenge.tsx` (plan selection cards)
-- Dashboard cards
-
-Apply `cream-ripple` class to buttons globally via `button.tsx` base styles.
-
-### 7. Slider Animations
-
-In `src/components/ui/slider.tsx`, add cream-themed track/thumb styling:
-- Track: cream gradient background
-- Thumb: teal with cream glow on drag
-- Range fill: teal-to-cream gradient animation
-
-In `BuyChallenge.tsx` size selector pills, add smooth slide transition animation when switching sizes.
-
-## Files Modified
-
-1. `src/index.css` — Full palette swap + cream utility classes
-2. `tailwind.config.ts` — New keyframes (cream-ripple, cream-slide, cream-glow)
-3. `src/components/HeroBanner.tsx` — Hero card banner, rename button to "Rules", new `PlatformRules` component
-4. `src/pages/Index.tsx` — Add `PlatformRules` section
-5. `src/components/Header.tsx` — Branded logo label with icon
-6. `src/components/ui/slider.tsx` — Cream-themed slider styling
-7. `src/components/ui/button.tsx` — Add ripple effect class
-8. `src/components/ui/card.tsx` — Add cream-hover class by default
+### 8. Header — Rules Link in Mobile Menu
+**File:** `src/components/Header.tsx`
+- Add "Rules" link in both desktop nav and mobile hamburger menu
+- Position after "Buy Challenge"
 
 ## Technical Details
 
-- Rules data fetched from `challenge_plans` table via Supabase query, grouped by `challenge_type`
-- All color changes are in CSS variables only — no component-level color hardcoding needed (except gradient classes which reference primary)
-- Ripple effect uses CSS `::after` with `@keyframes` — no JS needed
-- The cream theme maintains sufficient contrast ratios (WCAG AA) with dark brown text on cream backgrounds
+- Rules page is a new route `/rules` — no auth required (public)
+- Wallet account dropdown queries `trading_accounts` WHERE `user_id` AND `status` IN ('active', 'funded') with join to `challenge_plans`
+- Withdrawal confirmation popup uses existing `Dialog` component
+- `withdrawal_reports` table needs RLS policies for user insert/select and admin all
+- Admin sidebar uses simple state toggle, not the shadcn Sidebar component (to keep admin self-contained)
+- Hero animations use CSS-only `@keyframes` — no JS
+- Background darkness is achieved via CSS variable change only — all components inherit automatically
+
+## Files Modified/Created
+
+1. `src/index.css` — darker bg, gradient card styles, hero animations
+2. `tailwind.config.ts` — new animation keyframes
+3. `src/pages/Rules.tsx` — **NEW** dedicated rules page with 30% consistency rule
+4. `src/App.tsx` — add `/rules` route
+5. `src/components/Header.tsx` — Rules link in nav + mobile menu
+6. `src/components/HeroBanner.tsx` — animations, Rules button → navigate to /rules, trim inline rules section
+7. `src/pages/BuyChallenge.tsx` — gradient cards per challenge type
+8. `src/components/dashboard/Wallet.tsx` — full redesign with account dropdown, eligibility bar, confirmation popup, history tab, report feature
+9. `src/pages/Admin.tsx` — sidebar layout, reports tab, copy USDT address
+10. Database migration — `withdrawal_reports` table + RLS
 
