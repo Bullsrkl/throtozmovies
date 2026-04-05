@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, LogOut, Menu, X } from "lucide-react";
+import { ShoppingCart, User, LogOut, Menu, X, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -22,7 +22,6 @@ export const Header = () => {
         <div className="flex items-center justify-between py-4">
           <Link to="/" className="flex items-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-primary/20 shadow-card">
-              {/* Dumbbell/chart icon */}
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-primary">
                 <path d="M6.5 6.5h11v3h-11z" fill="currentColor" opacity="0.3"/>
                 <path d="M3 12h3v8H3zM18 12h3v8h-3zM6 6a2 2 0 012-2h8a2 2 0 012 2v4H6V6zM8 10v10M16 10v10M6 14h12M6 18h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -39,6 +38,12 @@ export const Header = () => {
               <Link to="/buy-challenge">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Buy Challenge
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="cream-ripple" asChild>
+              <Link to="/rules">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Rules
               </Link>
             </Button>
             {user ? (
@@ -82,6 +87,12 @@ export const Header = () => {
           <div className="md:hidden border-t border-border py-4 space-y-2">
             <Button variant="ghost" className="w-full justify-start" asChild onClick={() => setMobileOpen(false)}>
               <Link to="/buy-challenge">Buy Challenge</Link>
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" asChild onClick={() => setMobileOpen(false)}>
+              <Link to="/rules">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Rules
+              </Link>
             </Button>
             {user ? (
               <>

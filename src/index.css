@@ -2,20 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Creamy Prop Gym Theme — All colors HSL */
+/* Creamy Prop Gym Theme — Darker Warm Palette */
 
 @layer base {
   :root {
-    --background: 35 40% 96%;
-    --foreground: 30 20% 15%;
+    --background: 30 20% 85%;
+    --foreground: 30 20% 12%;
 
-    --card: 35 30% 92%;
-    --card-foreground: 30 20% 15%;
+    --card: 35 35% 94%;
+    --card-foreground: 30 20% 12%;
 
-    --popover: 35 30% 92%;
-    --popover-foreground: 30 20% 15%;
+    --popover: 35 35% 94%;
+    --popover-foreground: 30 20% 12%;
 
-    /* Teal primary accent (deeper for cream contrast) */
+    /* Teal primary accent */
     --primary: 168 80% 38%;
     --primary-light: 168 65% 48%;
     --primary-foreground: 0 0% 100%;
@@ -28,32 +28,32 @@
     /* Golden admin */
     --admin: 43 63% 52%;
     --admin-light: 44 100% 67%;
-    --admin-foreground: 30 20% 15%;
+    --admin-foreground: 30 20% 12%;
 
-    --secondary: 35 20% 90%;
-    --secondary-foreground: 30 20% 15%;
+    --secondary: 33 18% 88%;
+    --secondary-foreground: 30 20% 12%;
 
-    --muted: 35 15% 88%;
-    --muted-foreground: 30 10% 45%;
+    --muted: 33 12% 82%;
+    --muted-foreground: 30 10% 42%;
 
-    --accent: 35 25% 88%;
-    --accent-foreground: 30 20% 15%;
+    --accent: 33 20% 86%;
+    --accent-foreground: 30 20% 12%;
 
     --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 20% 85%;
-    --input: 35 15% 88%;
+    --border: 33 16% 78%;
+    --input: 33 12% 82%;
     --ring: 168 80% 38%;
 
     --radius: 1rem;
 
     /* Warm shadows */
-    --shadow-card: 0 4px 24px -4px rgba(139, 119, 91, 0.08);
-    --shadow-elevated: 0 12px 48px -8px rgba(139, 119, 91, 0.12);
+    --shadow-card: 0 4px 24px -4px rgba(120, 100, 72, 0.12);
+    --shadow-elevated: 0 12px 48px -8px rgba(120, 100, 72, 0.18);
     
     /* Creamy glass effect */
-    --glass-bg: rgba(255, 248, 235, 0.85);
+    --glass-bg: rgba(245, 235, 218, 0.88);
     --glass-border: rgba(23, 184, 151, 0.15);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -77,7 +77,7 @@
   }
   .cream-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px -8px rgba(139, 119, 91, 0.15), 0 0 0 1px rgba(23, 184, 151, 0.08);
+    box-shadow: 0 8px 30px -8px rgba(120, 100, 72, 0.2), 0 0 0 1px rgba(23, 184, 151, 0.1);
   }
 
   .cream-ripple {
@@ -88,7 +88,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), rgba(255, 243, 220, 0.5) 0%, transparent 60%);
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), rgba(245, 230, 200, 0.6) 0%, transparent 60%);
     opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
@@ -100,14 +100,49 @@
   .cream-glow {
     animation: cream-glow-pulse 2s ease-in-out infinite;
   }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-card to-primary/[0.03] border border-border;
+  }
+
+  .gradient-card-teal {
+    @apply bg-gradient-to-br from-card via-card to-primary/[0.06];
+  }
+
+  .gradient-card-green {
+    @apply bg-gradient-to-br from-card via-card to-premium/[0.06];
+  }
+
+  .gradient-card-amber {
+    @apply bg-gradient-to-br from-card via-card to-admin/[0.06];
+  }
 }
 
 @keyframes cream-glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(139, 119, 91, 0.1); }
-  50% { box-shadow: 0 0 20px rgba(139, 119, 91, 0.2); }
+  0%, 100% { box-shadow: 0 0 8px rgba(120, 100, 72, 0.12); }
+  50% { box-shadow: 0 0 20px rgba(120, 100, 72, 0.25); }
 }
 
 @keyframes cream-slide {
   0% { transform: translateX(-10px); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes float-up-down {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes shimmer-btn {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-float {
+  animation: float-up-down 4s ease-in-out infinite;
+}
+
+.shimmer-btn {
+  background-size: 200% auto;
+  animation: shimmer-btn 3s linear infinite;
 }

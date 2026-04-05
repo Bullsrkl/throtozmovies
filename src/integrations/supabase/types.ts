@@ -751,6 +751,54 @@ export type Database = {
           },
         ]
       }
+      withdrawal_reports: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          id: string
+          message: string
+          resolved_at: string | null
+          status: string
+          user_id: string
+          withdrawal_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          resolved_at?: string | null
+          status?: string
+          user_id: string
+          withdrawal_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          status?: string
+          user_id?: string
+          withdrawal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_reports_withdrawal_id_fkey"
+            columns: ["withdrawal_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawals: {
         Row: {
           admin_notes: string | null
