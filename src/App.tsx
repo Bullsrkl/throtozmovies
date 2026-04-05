@@ -10,6 +10,7 @@ import BuyChallenge from "./pages/BuyChallenge";
 import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import Rules from "./pages/Rules";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/rules" element={<Rules />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

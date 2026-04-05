@@ -1,5 +1,30 @@
 import { Header } from "@/components/Header";
-import { HeroBanner, FundingModels, Features, PlatformRules, HowItWorks } from "@/components/HeroBanner";
+import { HeroBanner, FundingModels, Features, HowItWorks } from "@/components/HeroBanner";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+function RulesPreview() {
+  const navigate = useNavigate();
+  return (
+    <section className="py-16 px-4">
+      <div className="container mx-auto max-w-3xl text-center space-y-6">
+        <h2 className="text-3xl md:text-4xl font-display font-bold">Know the Rules Before You Trade</h2>
+        <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          Complete transparency on profit targets, drawdown limits, payout schedules, and the 30% consistency rule for instant accounts.
+        </p>
+        <Button
+          size="lg"
+          variant="outline"
+          className="border-primary/20 hover:bg-primary/10 text-lg px-8 py-5 h-auto cream-ripple"
+          onClick={() => navigate("/rules")}
+        >
+          View All Rules <ArrowRight className="h-5 w-5 ml-2" />
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 export default function Index() {
   return (
@@ -8,7 +33,7 @@ export default function Index() {
       <HeroBanner />
       <FundingModels />
       <Features />
-      <PlatformRules />
+      <RulesPreview />
       <HowItWorks />
 
       {/* Footer */}

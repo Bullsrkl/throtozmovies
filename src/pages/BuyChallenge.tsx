@@ -10,21 +10,11 @@ import { useAuth } from "@/hooks/useAuth";
 const ACCOUNT_SIZES = [5000, 10000, 30000, 50000, 100000, 500000];
 
 const SIZE_LABELS: Record<number, string> = {
-  5000: "$5K",
-  10000: "$10K",
-  30000: "$30K",
-  50000: "$50K",
-  100000: "$100K",
-  500000: "$500K",
+  5000: "$5K", 10000: "$10K", 30000: "$30K", 50000: "$50K", 100000: "$100K", 500000: "$500K",
 };
 
 const BASE_PRICES: Record<number, number> = {
-  5000: 28,
-  10000: 49,
-  30000: 90,
-  50000: 169,
-  100000: 210,
-  500000: 350,
+  5000: 28, 10000: 49, 30000: 90, 50000: 169, 100000: 210, 500000: 350,
 };
 
 function getPrice(size: number, type: string): number {
@@ -35,15 +25,15 @@ function getPrice(size: number, type: string): number {
 }
 
 const CHALLENGE_TYPES = [
-  { value: "two_step", label: "2-Step", icon: BarChart3 },
-  { value: "one_step", label: "1-Step", icon: Target },
-  { value: "instant", label: "Instant", icon: Zap },
+  { value: "two_step", label: "2-Step", icon: BarChart3, gradient: "gradient-card-teal" },
+  { value: "one_step", label: "1-Step", icon: Target, gradient: "gradient-card-green" },
+  { value: "instant", label: "Instant", icon: Zap, gradient: "gradient-card-amber" },
 ];
 
 const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string }> = {
   two_step: { profitTarget: "8%", phase2: "5%", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No" },
   one_step: { profitTarget: "10%", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No" },
-  instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "No" },
+  instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "30% at withdrawal" },
 };
 
 export default function BuyChallenge() {
@@ -54,12 +44,10 @@ export default function BuyChallenge() {
 
   const price = getPrice(selectedSize, challengeType);
   const rules = RULES[challengeType];
+  const currentTypeConfig = CHALLENGE_TYPES.find((c) => c.value === challengeType)!;
 
   const handleBuy = () => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!user) { navigate("/auth"); return; }
     navigate(`/checkout?size=${selectedSize}&type=${challengeType}`);
   };
 
@@ -72,7 +60,7 @@ export default function BuyChallenge() {
     `${rules.dailyDD} Daily Drawdown`,
     `${rules.overallDD} Max Drawdown`,
     ...(challengeType !== "instant" ? [`Min ${rules.minDays} Trading Days`] : []),
-    "No Consistency Rule",
+    challengeType === "instant" ? "30% Consistency Rule (at withdrawal)" : "No Consistency Rule",
   ];
 
   return (
@@ -109,7 +97,7 @@ export default function BuyChallenge() {
           </div>
         </div>
 
-        {/* Account Size Selector — Horizontal Pills */}
+        {/* Account Size Selector */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">
           {ACCOUNT_SIZES.map((size) => {
             const isActive = selectedSize === size;
@@ -135,14 +123,13 @@ export default function BuyChallenge() {
           })}
         </div>
 
-        {/* Main Feature Card — Glassmorphic */}
-        <Card className="relative border-primary/30 bg-gradient-to-br from-card to-primary/5 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.2)] mb-8 overflow-hidden">
+        {/* Main Feature Card with gradient */}
+        <Card className={`relative ${currentTypeConfig.gradient} border-primary/20 shadow-elevated mb-8 overflow-hidden`}>
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardContent className="relative p-6 sm:p-8">
-            {/* Size + Price */}
             <div className="text-center mb-6">
               <Badge variant="outline" className="mb-3 text-xs border-primary/30">
-                {CHALLENGE_TYPES.find((c) => c.value === challengeType)?.label} Challenge
+                {currentTypeConfig.label} Challenge
               </Badge>
               <h2 className="text-4xl font-display font-bold mb-1">${selectedSize.toLocaleString()}</h2>
               <p className="text-sm text-muted-foreground mb-4">Account Size</p>
@@ -152,7 +139,6 @@ export default function BuyChallenge() {
               </div>
             </div>
 
-            {/* Features List */}
             <div className="space-y-2.5 max-w-sm mx-auto mb-6">
               {features.map((f) => (
                 <div key={f} className="flex items-center gap-2.5 text-sm">
@@ -162,9 +148,8 @@ export default function BuyChallenge() {
               ))}
             </div>
 
-            {/* CTA */}
             <Button
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary-light text-primary-foreground font-display font-bold gap-2"
+              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary-light text-primary-foreground font-display font-bold gap-2 cream-ripple"
               onClick={handleBuy}
             >
               Buy Challenge <ArrowRight className="h-5 w-5" />
@@ -173,7 +158,7 @@ export default function BuyChallenge() {
         </Card>
 
         {/* Comparison Table */}
-        <Card className="border-border">
+        <Card className="border-border gradient-card">
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
