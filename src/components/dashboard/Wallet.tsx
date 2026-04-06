@@ -6,9 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Copy, Send, MessageSquare } from "lucide-react";
+import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -26,53 +25,27 @@ interface TradingAccount {
   };
 }
 
-interface Withdrawal {
-  id: string;
-  amount: number;
-  net_amount: number;
-  platform_fee: number;
-  usdt_address: string | null;
-  network: string | null;
-  status: string;
-  requested_at: string;
-  admin_notes: string | null;
-}
-
 const NETWORKS = ["BEP20", "ERC20", "TRC20", "Polygon", "Arbitrum", "Solana"];
 
 export function Wallet() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [amount, setAmount] = useState("");
   const [usdtAddress, setUsdtAddress] = useState("");
   const [network, setNetwork] = useState("BEP20");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"wallet" | "history">("wallet");
 
   // Confirmation dialog
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmData, setConfirmData] = useState<any>(null);
 
-  // Detail dialog
-  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
-
-  // Report dialog
-  const [showReport, setShowReport] = useState(false);
-  const [reportMessage, setReportMessage] = useState("");
-  const [reportWithdrawalId, setReportWithdrawalId] = useState("");
-  const [submittingReport, setSubmittingReport] = useState(false);
-
   const MIN_WITHDRAWAL = 100;
   const PLATFORM_FEE_PERCENT = 0;
 
   useEffect(() => {
-    if (user) {
-      fetchAccounts();
-      fetchWithdrawals();
-    }
+    if (user) fetchAccounts();
   }, [user]);
 
   const fetchAccounts = async () => {
@@ -83,7 +56,6 @@ export function Wallet() {
       .in("status", ["active", "funded"]);
 
     if (data && data.length > 0) {
-      // fetch challenge plans for each
       const purchaseIds = data.map(a => a.purchase_id);
       const { data: purchases } = await supabase
         .from("challenge_purchases")
@@ -102,15 +74,6 @@ export function Wallet() {
       if (!selectedAccountId && enriched.length > 0) setSelectedAccountId(enriched[0].id);
     }
     setLoading(false);
-  };
-
-  const fetchWithdrawals = async () => {
-    const { data } = await supabase
-      .from("withdrawals")
-      .select("*")
-      .eq("user_id", user!.id)
-      .order("requested_at", { ascending: false });
-    setWithdrawals((data as Withdrawal[]) || []);
   };
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId);
@@ -158,37 +121,11 @@ export function Wallet() {
       if (error) throw error;
       toast.success("Withdrawal request submitted!");
       setAmount(""); setUsdtAddress(""); setShowConfirm(false); setConfirmData(null);
-      fetchWithdrawals();
     } catch (error: any) {
       toast.error(error.message || "Failed to submit withdrawal");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleSubmitReport = async () => {
-    if (!reportMessage.trim()) { toast.error("Please enter your message"); return; }
-    setSubmittingReport(true);
-    try {
-      const { error } = await supabase.from("withdrawal_reports" as any).insert({
-        withdrawal_id: reportWithdrawalId,
-        user_id: user!.id,
-        message: reportMessage,
-      } as any);
-      if (error) throw error;
-      toast.success("Report submitted successfully!");
-      setShowReport(false); setReportMessage(""); setReportWithdrawalId("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to submit report");
-    } finally {
-      setSubmittingReport(false);
-    }
-  };
-
-  const statusIcon = (status: string) => {
-    if (status === "paid") return <CheckCircle className="h-4 w-4 text-primary" />;
-    if (status === "rejected") return <XCircle className="h-4 w-4 text-destructive" />;
-    return <Clock className="h-4 w-4 text-muted-foreground" />;
   };
 
   if (loading) return <div className="text-center py-12 text-muted-foreground">Loading wallet...</div>;
@@ -200,175 +137,125 @@ export function Wallet() {
         <p className="text-muted-foreground">Manage your profits and withdrawals</p>
       </div>
 
-      {/* Mobile tabs */}
-      <div className="flex md:hidden gap-2 mb-4">
-        <Button variant={activeTab === "wallet" ? "default" : "outline"} className="flex-1" onClick={() => setActiveTab("wallet")}>
-          <WalletIcon className="h-4 w-4 mr-2" /> Wallet
-        </Button>
-        <Button variant={activeTab === "history" ? "default" : "outline"} className="flex-1" onClick={() => setActiveTab("history")}>
-          <Clock className="h-4 w-4 mr-2" /> History
-        </Button>
+      {/* Account Selector */}
+      {accounts.length > 0 && (
+        <Card className="gradient-card">
+          <CardContent className="p-4">
+            <Label className="text-xs text-muted-foreground mb-2 block">Select Active Account</Label>
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.challenge_plans.challenge_type.replace("_", "-")} — ${a.challenge_plans.account_size.toLocaleString()} (#{a.account_number})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Balance Cards */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <Card className="gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
+            <WalletIcon className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${selectedAccount?.balance?.toFixed(2) || "0.00"}</div>
+            <p className="text-xs text-muted-foreground">{selectedAccount?.phase === "master" ? "Funded Account" : selectedAccount?.phase || "No account"}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Trading Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">${accountProfit.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">{selectedAccount?.profit_percent?.toFixed(1) || "0"}% return</p>
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Eligible to Withdraw</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${eligibleAmount.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">{selectedAccount?.phase === "master" ? "Available" : "Fund account first"}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid md:grid-cols-[280px_1fr] gap-6">
-        {/* Left: History (desktop always, mobile conditional) */}
-        <div className={`space-y-4 ${activeTab !== "history" ? "hidden md:block" : ""}`}>
-          <h3 className="font-display font-bold text-sm text-muted-foreground uppercase tracking-wider">Withdrawal History</h3>
-          {withdrawals.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">No withdrawals yet</p>
-          ) : (
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {withdrawals.map((w) => (
-                <Card
-                  key={w.id}
-                  className="p-3 cursor-pointer cream-hover gradient-card"
-                  onClick={() => setSelectedWithdrawal(w)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {statusIcon(w.status)}
-                      <div>
-                        <p className="text-sm font-semibold">${w.amount.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(w.requested_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <Badge className={
-                      w.status === "paid" ? "bg-primary/10 text-primary" :
-                      w.status === "rejected" ? "bg-destructive/10 text-destructive" :
-                      "bg-muted text-muted-foreground"
-                    }>
-                      {w.status?.toUpperCase()}
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Eligibility Progress Bar */}
+      <Card className="gradient-card">
+        <CardContent className="p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Withdrawal Eligibility</span>
+            <span className="font-medium">{eligibilityPercent.toFixed(0)}%</span>
+          </div>
+          <Progress value={eligibilityPercent} className="h-3" />
+          <p className="text-xs text-muted-foreground">
+            {eligibleAmount >= MIN_WITHDRAWAL
+              ? "✅ You are eligible to request a withdrawal"
+              : `Need $${(MIN_WITHDRAWAL - eligibleAmount).toFixed(2)} more profit to withdraw`}
+          </p>
+        </CardContent>
+      </Card>
 
-        {/* Right: Main wallet content */}
-        <div className={`space-y-6 ${activeTab !== "wallet" ? "hidden md:block" : ""}`}>
-          {/* Account Selector */}
-          {accounts.length > 0 && (
-            <Card className="gradient-card">
-              <CardContent className="p-4">
-                <Label className="text-xs text-muted-foreground mb-2 block">Select Active Account</Label>
-                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                  <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+      {/* Withdrawal Form */}
+      <Card className="gradient-card">
+        <CardHeader><CardTitle>Request Withdrawal</CardTitle></CardHeader>
+        <CardContent>
+          <form onSubmit={handlePayout} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount (USD)</Label>
+                <Input type="number" step="0.01" placeholder="Min $100" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Network</Label>
+                <Select value={network} onValueChange={setNetwork}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.challenge_plans.challenge_type.replace("_", "-")} — ${a.challenge_plans.account_size.toLocaleString()} (#{a.account_number})
-                      </SelectItem>
+                    {NETWORKS.map((n) => (
+                      <SelectItem key={n} value={n}>{n}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Balance Cards */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Card className="gradient-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
-                <WalletIcon className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${selectedAccount?.balance?.toFixed(2) || "0.00"}</div>
-                <p className="text-xs text-muted-foreground">{selectedAccount?.phase === "master" ? "Funded Account" : selectedAccount?.phase || "No account"}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="gradient-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Trading Profit</CardTitle>
-                <TrendingUp className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary">${accountProfit.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">{selectedAccount?.profit_percent?.toFixed(1) || "0"}% return</p>
-              </CardContent>
-            </Card>
-
-            <Card className="gradient-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Eligible to Withdraw</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${eligibleAmount.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">{selectedAccount?.phase === "master" ? "Available" : "Fund account first"}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Eligibility Progress Bar */}
-          <Card className="gradient-card">
-            <CardContent className="p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Withdrawal Eligibility</span>
-                <span className="font-medium">{eligibilityPercent.toFixed(0)}%</span>
               </div>
-              <Progress value={eligibilityPercent} className="h-3" />
-              <p className="text-xs text-muted-foreground">
-                {eligibleAmount >= MIN_WITHDRAWAL
-                  ? "✅ You are eligible to request a withdrawal"
-                  : `Need $${(MIN_WITHDRAWAL - eligibleAmount).toFixed(2)} more profit to withdraw`}
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="space-y-2">
+              <Label>USDT Address</Label>
+              <Input placeholder="0x..." value={usdtAddress} onChange={(e) => setUsdtAddress(e.target.value)} className="font-mono" />
+            </div>
 
-          {/* Withdrawal Form */}
-          <Card className="gradient-card">
-            <CardHeader><CardTitle>Request Withdrawal</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handlePayout} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Amount (USD)</Label>
-                    <Input type="number" step="0.01" placeholder="Min $100" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Network</Label>
-                    <Select value={network} onValueChange={setNetwork}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {NETWORKS.map((n) => (
-                          <SelectItem key={n} value={n}>{n}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>USDT Address</Label>
-                  <Input placeholder="0x..." value={usdtAddress} onChange={(e) => setUsdtAddress(e.target.value)} className="font-mono" />
-                </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Withdrawals are processed within 24 hours</span>
+            </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>Withdrawals are processed within 24 hours</span>
-                </div>
+            <Button type="submit" disabled={submitting || eligibleAmount < MIN_WITHDRAWAL} className="w-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground cream-ripple">
+              <Send className="h-4 w-4 mr-2" />
+              {submitting ? "Submitting..." : "Request Payout"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-                <Button type="submit" disabled={submitting || eligibleAmount < MIN_WITHDRAWAL} className="w-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground cream-ripple">
-                  <Send className="h-4 w-4 mr-2" />
-                  {submitting ? "Submitting..." : "Request Payout"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {accounts.length === 0 && (
-            <Card className="gradient-card">
-              <CardContent className="p-8 text-center text-muted-foreground">
-                <WalletIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>No active trading accounts. Buy a challenge to get started!</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+      {accounts.length === 0 && (
+        <Card className="gradient-card">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            <WalletIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p>No active trading accounts. Buy a challenge to get started!</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
@@ -392,82 +279,6 @@ export function Wallet() {
             <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
             <Button onClick={confirmWithdrawal} disabled={submitting} className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground">
               {submitting ? "Processing..." : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Withdrawal Detail Dialog */}
-      <Dialog open={!!selectedWithdrawal} onOpenChange={() => setSelectedWithdrawal(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdrawal Details</DialogTitle>
-            <DialogDescription>Transaction information</DialogDescription>
-          </DialogHeader>
-          {selectedWithdrawal && (
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">${selectedWithdrawal.amount.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Fee</span><span>${selectedWithdrawal.platform_fee.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Net</span><span className="font-bold text-primary">${selectedWithdrawal.net_amount.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Network</span><span>{selectedWithdrawal.network || "N/A"}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="font-mono text-xs max-w-[200px] truncate">{selectedWithdrawal.usdt_address || "N/A"}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{new Date(selectedWithdrawal.requested_at).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Transaction ID</span><span className="font-mono text-xs">{selectedWithdrawal.id.slice(0, 12)}...</span></div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <div className="flex items-center gap-1">
-                  {statusIcon(selectedWithdrawal.status)}
-                  <Badge className={
-                    selectedWithdrawal.status === "paid" ? "bg-primary/10 text-primary" :
-                    selectedWithdrawal.status === "rejected" ? "bg-destructive/10 text-destructive" :
-                    "bg-muted text-muted-foreground"
-                  }>{selectedWithdrawal.status?.toUpperCase()}</Badge>
-                </div>
-              </div>
-              {selectedWithdrawal.admin_notes && (
-                <div className="p-3 rounded-lg bg-muted/50 text-xs">
-                  <p className="font-medium mb-1">Admin Notes:</p>
-                  <p className="text-muted-foreground">{selectedWithdrawal.admin_notes}</p>
-                </div>
-              )}
-
-              {(selectedWithdrawal.status === "rejected" || selectedWithdrawal.status === "pending") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    setReportWithdrawalId(selectedWithdrawal.id);
-                    setSelectedWithdrawal(null);
-                    setShowReport(true);
-                  }}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Report an Issue
-                </Button>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Report Dialog */}
-      <Dialog open={showReport} onOpenChange={setShowReport}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Report Issue</DialogTitle>
-            <DialogDescription>Describe your issue with this withdrawal. Our team will review it.</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            placeholder="Describe your issue..."
-            value={reportMessage}
-            onChange={(e) => setReportMessage(e.target.value)}
-            className="min-h-[120px]"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReport(false)}>Cancel</Button>
-            <Button onClick={handleSubmitReport} disabled={submittingReport} className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground">
-              {submittingReport ? "Submitting..." : "Submit Report"}
             </Button>
           </DialogFooter>
         </DialogContent>

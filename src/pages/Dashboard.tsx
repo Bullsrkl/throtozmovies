@@ -74,6 +74,7 @@ export default function Dashboard() {
             <Route path="wallet" element={<Wallet />} />
             <Route path="certificates" element={<Certificates />} />
             <Route path="referral" element={<Referral />} />
+            <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </main>

@@ -26,6 +26,7 @@ const menuItems = [
   { icon: Wallet, label: "Wallet", path: "/dashboard/wallet" },
   { icon: Award, label: "Certificates", path: "/dashboard/certificates" },
   { icon: Users, label: "Refer & Earn", path: "/dashboard/referral" },
+  { icon: Clock, label: "History", path: "/dashboard/history" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
