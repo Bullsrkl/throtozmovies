@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Wallet, TrendingUp, CheckCircle, XCircle, Crown, Search, Settings, Menu, X, BarChart3, MessageSquare, Copy } from "lucide-react";
+import { Users, Wallet, TrendingUp, CheckCircle, XCircle, Crown, Search, Settings, Menu, X, BarChart3, MessageSquare, Copy, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +16,7 @@ const SIDEBAR_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "payments", label: "Payments", icon: TrendingUp },
   { key: "withdrawals", label: "Withdrawals", icon: Wallet },
+  { key: "history", label: "History", icon: Clock },
   { key: "users", label: "Users", icon: Users },
   { key: "reports", label: "Reports", icon: MessageSquare },
   { key: "settings", label: "Settings", icon: Settings },
@@ -27,11 +27,15 @@ export default function Admin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [allPurchases, setAllPurchases] = useState<any[]>([]);
+  const [allWithdrawals, setAllWithdrawals] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
   const [usdtAddress, setUsdtAddress] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [stats, setStats] = useState({ totalUsers: 0, pendingPayments: 0, pendingWithdrawals: 0, openReports: 0 });
@@ -48,6 +52,7 @@ export default function Admin() {
       fetchData();
       fetchSettings();
       fetchReports();
+      fetchAllHistory();
     }
   }, [user, isAdmin]);
 
@@ -62,6 +67,20 @@ export default function Admin() {
       .select("*, profiles:user_id(email, full_name), withdrawals:withdrawal_id(amount, usdt_address, network, status)")
       .order("created_at", { ascending: false });
     setReports((data as any[]) || []);
+  };
+
+  const fetchAllHistory = async () => {
+    const { data: pData } = await supabase
+      .from("challenge_purchases")
+      .select("*, profiles(email, full_name), challenge_plans(account_size, challenge_type, price_usd)")
+      .order("created_at", { ascending: false });
+    setAllPurchases(pData || []);
+
+    const { data: wData } = await supabase
+      .from("withdrawals")
+      .select("*, profiles(email, full_name)")
+      .order("requested_at", { ascending: false });
+    setAllWithdrawals(wData || []);
   };
 
   const fetchData = async () => {
@@ -163,61 +182,91 @@ export default function Admin() {
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-12 text-center">Loading...</div></div>;
   if (!user || !isAdmin) return null;
 
+  const filteredHistoryPurchases = allPurchases.filter((p: any) =>
+    !historySearch || p.profiles?.email?.toLowerCase().includes(historySearch.toLowerCase())
+  );
+  const filteredHistoryWithdrawals = allWithdrawals.filter((w: any) =>
+    !historySearch || w.profiles?.email?.toLowerCase().includes(historySearch.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <div className="flex">
         {/* Sidebar */}
         <aside className={`
-          fixed md:sticky top-[73px] left-0 z-40 h-[calc(100vh-73px)] w-64 bg-card border-r border-border p-4 space-y-2
-          transition-transform md:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          fixed md:sticky top-[73px] left-0 z-40 h-[calc(100vh-73px)] bg-card border-r border-border transition-all duration-300
+          ${sidebarCollapsed ? "md:w-16" : "md:w-64"} w-64
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
         `}>
-          <div className="flex items-center justify-between mb-4 md:hidden">
-            <span className="font-display font-bold text-admin">Admin</span>
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}><X className="h-4 w-4" /></Button>
+          <div className="flex flex-col h-full">
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              {!sidebarCollapsed && (
+                <span className="font-display font-bold bg-gradient-to-r from-admin to-admin-light bg-clip-text text-transparent">Admin</span>
+              )}
+              {/* Desktop collapse toggle */}
+              <Button variant="ghost" size="icon" className="hidden md:flex ml-auto" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </Button>
+              {/* Mobile close */}
+              <Button variant="ghost" size="icon" className="md:hidden ml-auto" onClick={() => setSidebarOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Nav items */}
+            <nav className="flex-1 space-y-1 p-2">
+              {SIDEBAR_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      sidebarCollapsed ? "justify-center" : ""
+                    } ${
+                      activeTab === item.key
+                        ? "bg-gradient-to-r from-admin/10 to-admin-light/10 text-admin border-l-2 border-admin"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span>{item.label}</span>
+                        {item.key === "payments" && stats.pendingPayments > 0 && (
+                          <Badge className="ml-auto bg-destructive/20 text-destructive text-xs">{stats.pendingPayments}</Badge>
+                        )}
+                        {item.key === "withdrawals" && stats.pendingWithdrawals > 0 && (
+                          <Badge className="ml-auto bg-destructive/20 text-destructive text-xs">{stats.pendingWithdrawals}</Badge>
+                        )}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
-          {SIDEBAR_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.key}
-                onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === item.key
-                    ? "bg-gradient-to-r from-admin to-admin-light text-admin-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-                {item.key === "payments" && stats.pendingPayments > 0 && (
-                  <Badge className="ml-auto bg-destructive/20 text-destructive text-xs">{stats.pendingPayments}</Badge>
-                )}
-                {item.key === "withdrawals" && stats.pendingWithdrawals > 0 && (
-                  <Badge className="ml-auto bg-destructive/20 text-destructive text-xs">{stats.pendingWithdrawals}</Badge>
-                )}
-              </button>
-            );
-          })}
         </aside>
 
-        {/* Mobile sidebar trigger */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed bottom-4 left-4 z-50 md:hidden bg-admin text-admin-foreground shadow-elevated rounded-full h-12 w-12"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        {/* Mobile hamburger trigger in header area */}
+        <div className="fixed top-[73px] left-0 right-0 z-30 md:hidden bg-card border-b border-border px-4 py-2 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="font-display font-bold text-sm bg-gradient-to-r from-admin to-admin-light bg-clip-text text-transparent">
+            {SIDEBAR_ITEMS.find(s => s.key === activeTab)?.label || "Admin"}
+          </span>
+          <Badge className="bg-gradient-to-r from-admin to-admin-light text-admin-foreground text-xs"><Crown className="h-3 w-3 mr-1" /> Admin</Badge>
+        </div>
 
         {/* Overlay */}
         {sidebarOpen && <div className="fixed inset-0 z-30 bg-foreground/20 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
         {/* Main */}
-        <main className="flex-1 p-4 md:p-8 max-w-6xl space-y-6">
-          <div className="flex items-center gap-3">
+        <main className="flex-1 p-4 md:p-8 max-w-6xl space-y-6 mt-12 md:mt-0">
+          <div className="hidden md:flex items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-display font-bold bg-gradient-to-r from-admin to-admin-light bg-clip-text text-transparent">
               {SIDEBAR_ITEMS.find(s => s.key === activeTab)?.label || "Admin"}
             </h1>
@@ -373,6 +422,110 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* History */}
+          {activeTab === "history" && (
+            <div className="space-y-6">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search by email..." value={historySearch} onChange={(e) => setHistorySearch(e.target.value)} className="pl-10" />
+              </div>
+
+              <Card className="gradient-card">
+                <CardHeader><CardTitle>Challenge Purchases ({filteredHistoryPurchases.length})</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Plan</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredHistoryPurchases.slice(0, 50).map((p: any) => (
+                          <TableRow key={p.id}>
+                            <TableCell>
+                              <div className="font-medium text-sm">{p.profiles?.full_name || "N/A"}</div>
+                              <div className="text-xs text-muted-foreground">{p.profiles?.email}</div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {p.challenge_plans?.challenge_type?.replace("_", "-")} — ${p.challenge_plans?.account_size?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-semibold text-sm">${p.challenge_plans?.price_usd}</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                p.status === "approved" ? "bg-primary/10 text-primary" :
+                                p.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                                p.status === "payment_submitted" ? "bg-admin/10 text-admin" :
+                                "bg-muted text-muted-foreground"
+                              }>{p.status?.replace("_", " ").toUpperCase()}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="gradient-card">
+                <CardHeader><CardTitle>Withdrawals ({filteredHistoryWithdrawals.length})</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Net</TableHead>
+                          <TableHead>Address</TableHead>
+                          <TableHead>Network</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredHistoryWithdrawals.slice(0, 50).map((w: any) => (
+                          <TableRow key={w.id}>
+                            <TableCell>
+                              <div className="font-medium text-sm">{w.profiles?.full_name || "N/A"}</div>
+                              <div className="text-xs text-muted-foreground">{w.profiles?.email}</div>
+                            </TableCell>
+                            <TableCell className="font-semibold text-sm">${w.amount}</TableCell>
+                            <TableCell className="text-sm">${w.net_amount}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono text-xs max-w-[100px] truncate">{w.usdt_address || "N/A"}</span>
+                                {w.usdt_address && (
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(w.usdt_address)}>
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">{w.network || "N/A"}</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                w.status === "paid" ? "bg-primary/10 text-primary" :
+                                w.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                                "bg-muted text-muted-foreground"
+                              }>{w.status?.toUpperCase()}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(w.requested_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Users */}

@@ -10,6 +10,7 @@ import { TradingAccounts } from "@/components/dashboard/TradingAccounts";
 import { Competition } from "@/components/dashboard/Competition";
 import { Certificates } from "@/components/dashboard/Certificates";
 import { Referral } from "@/components/dashboard/Referral";
+import { History } from "@/components/dashboard/History";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
@@ -40,6 +41,7 @@ export default function Dashboard() {
     { label: "Wallet", path: "/dashboard/wallet" },
     { label: "Certificates", path: "/dashboard/certificates" },
     { label: "Refer & Earn", path: "/dashboard/referral" },
+    { label: "History", path: "/dashboard/history" },
     { label: "Settings", path: "/dashboard/settings" },
   ];
 
@@ -72,6 +74,7 @@ export default function Dashboard() {
             <Route path="wallet" element={<Wallet />} />
             <Route path="certificates" element={<Certificates />} />
             <Route path="referral" element={<Referral />} />
+            <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
