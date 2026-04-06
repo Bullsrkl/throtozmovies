@@ -41,6 +41,7 @@ export default function Dashboard() {
     { label: "Wallet", path: "/dashboard/wallet" },
     { label: "Certificates", path: "/dashboard/certificates" },
     { label: "Refer & Earn", path: "/dashboard/referral" },
+    { label: "History", path: "/dashboard/history" },
     { label: "Settings", path: "/dashboard/settings" },
   ];
 
