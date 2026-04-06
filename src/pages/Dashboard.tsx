@@ -10,6 +10,7 @@ import { TradingAccounts } from "@/components/dashboard/TradingAccounts";
 import { Competition } from "@/components/dashboard/Competition";
 import { Certificates } from "@/components/dashboard/Certificates";
 import { Referral } from "@/components/dashboard/Referral";
+import { History } from "@/components/dashboard/History";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
