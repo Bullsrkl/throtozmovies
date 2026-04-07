@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, LogOut, Menu, X, BookOpen } from "lucide-react";
+import pgLogo from "@/assets/pg-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -21,9 +22,7 @@ export const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-card border border-primary/30 shadow-card flex items-center justify-center">
-              <span className="text-lg font-display font-black text-primary leading-none">Pg</span>
-            </div>
+            <img src={pgLogo} alt="Prop Gym" className="w-9 h-9 rounded-lg object-contain" />
             <div className="flex items-baseline gap-0.5">
               <span className="text-xl md:text-2xl font-display font-bold text-foreground">Prop</span>
               <span className="text-xl md:text-2xl font-display font-bold text-primary">Gym</span>

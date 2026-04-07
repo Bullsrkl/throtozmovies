@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import pgLogo from "@/assets/pg-logo.png";
 import { HeroBanner, FundingModels, Features, HowItWorks } from "@/components/HeroBanner";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -40,9 +41,7 @@ export default function Index() {
       <footer className="border-t border-border py-12 px-4">
         <div className="container mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-card border border-primary/30 shadow-card flex items-center justify-center">
-              <span className="text-lg font-display font-black text-primary leading-none">Pg</span>
-            </div>
+            <img src={pgLogo} alt="Prop Gym" className="w-9 h-9 rounded-lg object-contain" />
             <div className="flex items-baseline gap-0.5">
               <span className="text-xl font-display font-bold text-foreground">Prop</span>
               <span className="text-xl font-display font-bold text-primary">Gym</span>
