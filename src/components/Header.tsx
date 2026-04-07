@@ -20,15 +20,13 @@ export const Header = () => {
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
-          <Link to="/" className="flex items-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-primary/20 shadow-card">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-primary">
-                <path d="M6.5 6.5h11v3h-11z" fill="currentColor" opacity="0.3"/>
-                <path d="M3 12h3v8H3zM18 12h3v8h-3zM6 6a2 2 0 012-2h8a2 2 0 012 2v4H6V6zM8 10v10M16 10v10M6 14h12M6 18h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <span className="text-2xl md:text-3xl font-display font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                Prop Gym
-              </span>
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-card border border-primary/30 shadow-card flex items-center justify-center">
+              <span className="text-lg font-display font-black text-primary leading-none">Pg</span>
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-xl md:text-2xl font-display font-bold text-foreground">Prop</span>
+              <span className="text-xl md:text-2xl font-display font-bold text-primary">Gym</span>
             </div>
           </Link>
 
