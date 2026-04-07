@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, LogOut, Menu, X, BookOpen } from "lucide-react";
+import pgLogo from "@/assets/pg-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
