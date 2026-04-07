@@ -91,9 +91,9 @@ export function HeroBanner() {
             </div>
           </div>
 
-          {/* Right: Vector Illustration */}
+          {/* Right: Profit Split Display */}
           <div className="relative">
-            <TraderIllustration />
+            <ProfitSplitDisplay />
           </div>
         </div>
       </div>
