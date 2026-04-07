@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import pgLogo from "@/assets/pg-logo.png";
 import { HeroBanner, FundingModels, Features, HowItWorks } from "@/components/HeroBanner";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
