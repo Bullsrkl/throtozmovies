@@ -72,7 +72,7 @@ export default function Checkout() {
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
-    if (!size || !BASE_PRICES[size]) { navigate("/buy-challenge"); return; }
+    if (!isInstant10 && (!size || !BASE_PRICES[size])) { navigate("/buy-challenge"); return; }
     supabase
       .from("platform_settings")
       .select("value")
