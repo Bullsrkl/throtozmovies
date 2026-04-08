@@ -158,12 +158,13 @@ export default function Checkout() {
     if (!screenshotFile) { toast({ title: "Payment screenshot required", variant: "destructive" }); return; }
     setSubmitting(true);
     try {
-      const { data: plan, error: planError } = await supabase
-        .from("challenge_plans")
-        .select("id")
-        .eq("account_size", size)
-        .eq("challenge_type", type as ChallengeType)
-        .single();
+      let planQuery = supabase.from("challenge_plans").select("id").eq("account_size", size);
+      if (isInstant10) {
+        planQuery = planQuery.eq("challenge_type", "instant" as ChallengeType).eq("price_usd", 10);
+      } else {
+        planQuery = planQuery.eq("challenge_type", type as ChallengeType);
+      }
+      const { data: plan, error: planError } = await planQuery.single();
       if (planError || !plan) { toast({ title: "Plan not found", variant: "destructive" }); setSubmitting(false); return; }
       const ext = screenshotFile.name.split(".").pop();
       const filePath = `${user.id}/${Date.now()}.${ext}`;
