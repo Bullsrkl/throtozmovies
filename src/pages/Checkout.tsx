@@ -44,8 +44,10 @@ export default function Checkout() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const size = Number(searchParams.get("size")) || 0;
-  const type = searchParams.get("type") || "two_step";
+  const rawType = searchParams.get("type") || "two_step";
+  const isInstant10 = rawType === "instant_10";
+  const size = isInstant10 ? 5000 : (Number(searchParams.get("size")) || 0);
+  const type = isInstant10 ? "instant_10" : rawType;
   const basePrice = getPrice(size, type);
 
   const [usdtAddress, setUsdtAddress] = useState("");
