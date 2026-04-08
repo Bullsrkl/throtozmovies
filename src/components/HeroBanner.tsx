@@ -105,11 +105,20 @@ export function FundingModels() {
   const navigate = useNavigate();
   const models = [
     {
+      icon: DollarSign,
+      title: "$10 Instant Funded",
+      description: "Start with just $10. Get a $5,000 funded account instantly.",
+      tag: "Low Cost Entry",
+      gradient: "gradient-card-amber",
+      link: "/buy-challenge?type=instant_10",
+    },
+    {
       icon: Zap,
       title: "Instant Account",
       description: "Skip the evaluation. Get funded immediately with our instant funding option.",
       tag: "+20% premium",
       gradient: "gradient-card-amber",
+      link: "/buy-challenge?type=instant",
     },
     {
       icon: Target,
@@ -117,6 +126,7 @@ export function FundingModels() {
       description: "Pass a single evaluation phase and receive your funded account.",
       tag: "Popular",
       gradient: "gradient-card-green",
+      link: "/buy-challenge?type=one_step",
     },
     {
       icon: BarChart3,
@@ -124,6 +134,7 @@ export function FundingModels() {
       description: "Complete two evaluation phases at the lowest price point.",
       tag: "Best Value",
       gradient: "gradient-card-teal",
+      link: "/buy-challenge?type=two_step",
     },
   ];
 
@@ -136,15 +147,15 @@ export function FundingModels() {
             Choose the evaluation path that suits your trading style
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {models.map((model, i) => (
             <Card
               key={i}
               className={`relative p-6 ${model.gradient} border-border hover:border-primary/30 transition-all cursor-pointer group cream-hover`}
-              onClick={() => navigate("/buy-challenge")}
+              onClick={() => navigate(model.link)}
             >
-              {model.tag === "Popular" && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground text-xs font-semibold">
+              {(model.tag === "Popular" || model.tag === "Low Cost Entry") && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground text-xs font-semibold whitespace-nowrap">
                   {model.tag}
                 </div>
               )}

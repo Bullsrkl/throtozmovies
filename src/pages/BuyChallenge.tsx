@@ -3,8 +3,8 @@ import { Header } from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Zap, Target, BarChart3, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { CheckCircle, Zap, Target, BarChart3, ArrowRight, DollarSign } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const ACCOUNT_SIZES = [5000, 10000, 30000, 50000, 100000, 500000];
@@ -18,6 +18,7 @@ const BASE_PRICES: Record<number, number> = {
 };
 
 function getPrice(size: number, type: string): number {
+  if (type === "instant_10") return 10;
   const base = BASE_PRICES[size];
   if (type === "one_step") return Math.round(base * 1.1 * 10) / 10;
   if (type === "instant") return Math.round(base * 1.2 * 10) / 10;
@@ -28,40 +29,60 @@ const CHALLENGE_TYPES = [
   { value: "two_step", label: "2-Step", icon: BarChart3, gradient: "gradient-card-teal" },
   { value: "one_step", label: "1-Step", icon: Target, gradient: "gradient-card-green" },
   { value: "instant", label: "Instant", icon: Zap, gradient: "gradient-card-amber" },
+  { value: "instant_10", label: "$10 Instant", icon: DollarSign, gradient: "gradient-card-amber" },
 ];
 
-const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string }> = {
-  two_step: { profitTarget: "8%", phase2: "5%", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No" },
-  one_step: { profitTarget: "10%", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No" },
-  instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "30% at withdrawal" },
+const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string; profitSplit: string }> = {
+  two_step: { profitTarget: "8%", phase2: "5%", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No", profitSplit: "Up to 90%" },
+  one_step: { profitTarget: "10%", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No", profitSplit: "Up to 90%" },
+  instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "30% at withdrawal", profitSplit: "Up to 90%" },
+  instant_10: { profitTarget: "—", phase2: "—", dailyDD: "3%", overallDD: "6%", minDays: "3 Days", consistency: "30% at withdrawal", profitSplit: "Up to 80%" },
 };
 
 export default function BuyChallenge() {
-  const [challengeType, setChallengeType] = useState("two_step");
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get("type") || "two_step";
+  const [challengeType, setChallengeType] = useState(initialType);
   const [selectedSize, setSelectedSize] = useState(50000);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const price = getPrice(selectedSize, challengeType);
+  const isInstant10 = challengeType === "instant_10";
+  const effectiveSize = isInstant10 ? 5000 : selectedSize;
+  const price = getPrice(effectiveSize, challengeType);
   const rules = RULES[challengeType];
   const currentTypeConfig = CHALLENGE_TYPES.find((c) => c.value === challengeType)!;
 
   const handleBuy = () => {
     if (!user) { navigate("/auth"); return; }
-    navigate(`/checkout?size=${selectedSize}&type=${challengeType}`);
+    if (isInstant10) {
+      navigate(`/checkout?size=5000&type=instant_10`);
+    } else {
+      navigate(`/checkout?size=${effectiveSize}&type=${challengeType}`);
+    }
   };
 
-  const features = [
-    ...(challengeType === "two_step"
-      ? [`Phase 1: ${rules.profitTarget} Profit Target`, `Phase 2: ${rules.phase2} Profit Target`]
-      : challengeType === "one_step"
-      ? [`${rules.profitTarget} Profit Target`]
-      : ["No Evaluation Required"]),
-    `${rules.dailyDD} Daily Drawdown`,
-    `${rules.overallDD} Max Drawdown`,
-    ...(challengeType !== "instant" ? [`Min ${rules.minDays} Trading Days`] : []),
-    challengeType === "instant" ? "30% Consistency Rule (at withdrawal)" : "No Consistency Rule",
-  ];
+  const features = isInstant10
+    ? [
+        "No Evaluation Required",
+        "3% Daily Drawdown",
+        "6% Max Drawdown",
+        "Min 3 Trading Days",
+        "30% Consistency Rule (at withdrawal)",
+        "Profit Split up to 80%",
+      ]
+    : [
+        ...(challengeType === "two_step"
+          ? [`Phase 1: ${rules.profitTarget} Profit Target`, `Phase 2: ${rules.phase2} Profit Target`]
+          : challengeType === "one_step"
+          ? [`${rules.profitTarget} Profit Target`]
+          : ["No Evaluation Required"]),
+        `${rules.dailyDD} Daily Drawdown`,
+        `${rules.overallDD} Max Drawdown`,
+        ...(challengeType !== "instant" ? [`Min ${rules.minDays} Trading Days`] : []),
+        challengeType === "instant" ? "30% Consistency Rule (at withdrawal)" : "No Consistency Rule",
+        `Profit Split ${rules.profitSplit}`,
+      ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +96,7 @@ export default function BuyChallenge() {
 
         {/* Challenge Type Toggle */}
         <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-xl border border-border bg-card p-1 gap-1">
+          <div className="inline-flex flex-wrap rounded-xl border border-border bg-card p-1 gap-1">
             {CHALLENGE_TYPES.map((ct) => {
               const Icon = ct.icon;
               const isActive = challengeType === ct.value;
@@ -97,41 +118,50 @@ export default function BuyChallenge() {
           </div>
         </div>
 
-        {/* Account Size Selector */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {ACCOUNT_SIZES.map((size) => {
-            const isActive = selectedSize === size;
-            const isPopular = size === 50000;
-            return (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={`relative px-4 py-2 rounded-full text-sm font-semibold transition-all border ${
-                  isActive
-                    ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
-                    : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {SIZE_LABELS[size]}
-                {isPopular && (
-                  <span className="absolute -top-2 -right-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
-                    HOT
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* Account Size Selector — hidden for instant_10 */}
+        {!isInstant10 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {ACCOUNT_SIZES.map((size) => {
+              const isActive = selectedSize === size;
+              const isPopular = size === 50000;
+              return (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`relative px-4 py-2 rounded-full text-sm font-semibold transition-all border ${
+                    isActive
+                      ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {SIZE_LABELS[size]}
+                  {isPopular && (
+                    <span className="absolute -top-2 -right-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
+                      HOT
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        {/* Main Feature Card with gradient */}
+        {/* Main Feature Card */}
         <Card className={`relative ${currentTypeConfig.gradient} border-primary/20 shadow-elevated mb-8 overflow-hidden`}>
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardContent className="relative p-6 sm:p-8">
             <div className="text-center mb-6">
-              <Badge variant="outline" className="mb-3 text-xs border-primary/30">
-                {currentTypeConfig.label} Challenge
-              </Badge>
-              <h2 className="text-4xl font-display font-bold mb-1">${selectedSize.toLocaleString()}</h2>
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Badge variant="outline" className="text-xs border-primary/30">
+                  {currentTypeConfig.label} Challenge
+                </Badge>
+                {isInstant10 && (
+                  <Badge className="bg-gradient-to-r from-primary to-primary-light text-primary-foreground text-xs">
+                    Low Cost Entry
+                  </Badge>
+                )}
+              </div>
+              <h2 className="text-4xl font-display font-bold mb-1">${effectiveSize.toLocaleString()}</h2>
               <p className="text-sm text-muted-foreground mb-4">Account Size</p>
               <div className="inline-flex items-baseline gap-1">
                 <span className="text-4xl font-display font-bold text-primary">${price}</span>
@@ -175,6 +205,7 @@ export default function BuyChallenge() {
                   ["Overall Drawdown Limit", rules.overallDD],
                   ["Min Trading Days", rules.minDays],
                   ["Consistency Rule", rules.consistency],
+                  ["Profit Split", rules.profitSplit],
                 ].map(([label, value]) => (
                   <tr key={label} className="border-b border-border last:border-0">
                     <td className="p-4 text-muted-foreground">{label}</td>

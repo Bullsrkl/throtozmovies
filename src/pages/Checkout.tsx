@@ -23,6 +23,7 @@ const BASE_PRICES: Record<number, number> = {
 type ChallengeType = "instant" | "one_step" | "two_step";
 
 function getPrice(size: number, type: string): number {
+  if (type === "instant_10") return 10;
   const base = BASE_PRICES[size];
   if (!base) return 0;
   if (type === "one_step") return Math.round(base * 1.1 * 10) / 10;
@@ -34,6 +35,7 @@ const TYPE_LABELS: Record<string, string> = {
   two_step: "2-Step Challenge",
   one_step: "1-Step Challenge",
   instant: "Instant Funding",
+  instant_10: "$10 Instant Funded",
 };
 
 export default function Checkout() {
@@ -42,8 +44,10 @@ export default function Checkout() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const size = Number(searchParams.get("size")) || 0;
-  const type = searchParams.get("type") || "two_step";
+  const rawType = searchParams.get("type") || "two_step";
+  const isInstant10 = rawType === "instant_10";
+  const size = isInstant10 ? 5000 : (Number(searchParams.get("size")) || 0);
+  const type = isInstant10 ? "instant_10" : rawType;
   const basePrice = getPrice(size, type);
 
   const [usdtAddress, setUsdtAddress] = useState("");
@@ -68,7 +72,7 @@ export default function Checkout() {
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
-    if (!size || !BASE_PRICES[size]) { navigate("/buy-challenge"); return; }
+    if (!isInstant10 && (!size || !BASE_PRICES[size])) { navigate("/buy-challenge"); return; }
     supabase
       .from("platform_settings")
       .select("value")
@@ -154,12 +158,13 @@ export default function Checkout() {
     if (!screenshotFile) { toast({ title: "Payment screenshot required", variant: "destructive" }); return; }
     setSubmitting(true);
     try {
-      const { data: plan, error: planError } = await supabase
-        .from("challenge_plans")
-        .select("id")
-        .eq("account_size", size)
-        .eq("challenge_type", type as ChallengeType)
-        .single();
+      let planQuery = supabase.from("challenge_plans").select("id").eq("account_size", size);
+      if (isInstant10) {
+        planQuery = planQuery.eq("challenge_type", "instant" as ChallengeType).eq("price_usd", 10);
+      } else {
+        planQuery = planQuery.eq("challenge_type", type as ChallengeType);
+      }
+      const { data: plan, error: planError } = await planQuery.single();
       if (planError || !plan) { toast({ title: "Plan not found", variant: "destructive" }); setSubmitting(false); return; }
       const ext = screenshotFile.name.split(".").pop();
       const filePath = `${user.id}/${Date.now()}.${ext}`;
@@ -178,7 +183,7 @@ export default function Checkout() {
     } catch { toast({ title: "Something went wrong", variant: "destructive" }); } finally { setSubmitting(false); }
   }, [user, transactionId, screenshotFile, size, type, discountApplied, discountCode, toast, navigate]);
 
-  if (!size || !BASE_PRICES[size]) return null;
+  if (!isInstant10 && (!size || !BASE_PRICES[size])) return null;
 
 
   return (

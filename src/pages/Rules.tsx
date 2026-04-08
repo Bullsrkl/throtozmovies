@@ -49,15 +49,20 @@ export default function Rules() {
             <TabsTrigger value="two_step" className="flex-1">2-Step</TabsTrigger>
             <TabsTrigger value="one_step" className="flex-1">1-Step</TabsTrigger>
             <TabsTrigger value="instant" className="flex-1">Instant</TabsTrigger>
+            <TabsTrigger value="instant_10" className="flex-1">$10 Instant</TabsTrigger>
           </TabsList>
 
-          {["two_step", "one_step", "instant"].map((type) => {
-            const typePlans = plans.filter((p) => p.challenge_type === type);
+          {["two_step", "one_step", "instant", "instant_10"].map((type) => {
+            const typePlans = type === "instant_10"
+              ? plans.filter((p) => p.challenge_type === "instant" && p.price_usd === 10 && p.account_size === 5000)
+              : type === "instant"
+              ? plans.filter((p) => p.challenge_type === "instant" && !(p.price_usd === 10 && p.account_size === 5000))
+              : plans.filter((p) => p.challenge_type === type);
             return (
               <TabsContent key={type} value={type}>
                 <Card className="overflow-hidden border-border gradient-card cream-hover mb-6">
                   <div className="p-4 bg-primary/5 border-b border-border">
-                    <h3 className="font-display font-bold text-lg">{typeLabels[type]}</h3>
+                    <h3 className="font-display font-bold text-lg">{type === "instant_10" ? "$10 Instant Funded Account" : typeLabels[type] || type}</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -198,17 +203,103 @@ export default function Rules() {
                           <li>Promote steady and controlled growth</li>
                         </ul>
                       </div>
+                    </div>
+                  </Card>
+                )}
 
-                      <div className="text-sm space-y-2">
-                        <p className="font-semibold text-foreground">Key Guidelines for Withdrawal:</p>
+                {type === "instant_10" && (
+                  <Card className="gradient-card p-6 space-y-4">
+                    <h4 className="font-display font-bold text-lg flex items-center gap-2"><Info className="h-5 w-5 text-primary" /> $10 Instant Funded Account Rules</h4>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <p>• <strong className="text-foreground">Account Size:</strong> $5,000 | <strong className="text-foreground">Price:</strong> $10</p>
+                      <p>• <strong className="text-foreground">No Evaluation:</strong> Get funded immediately — no profit target required.</p>
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <h5 className="font-display font-bold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-admin" /> Risk Rules</h5>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• <strong className="text-foreground">Daily Drawdown:</strong> 3% (stricter than standard instant accounts)</p>
+                        <p>• <strong className="text-foreground">Overall Drawdown:</strong> 6%</p>
+                        <p>• <strong className="text-foreground">Max Risk Per Trade:</strong> 1% recommended. Abnormal behavior may flag the account internally.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <h5 className="font-display font-bold">Trading Rules</h5>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• <strong className="text-foreground">Minimum Trading Days:</strong> 3 days before first withdrawal eligibility.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <h5 className="font-display font-bold flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> Profit Rules</h5>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• <strong className="text-foreground">Profit Split:</strong> 70% (initial), scalable up to 80% based on performance.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <h5 className="font-display font-bold">Withdrawal Rules</h5>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• <strong className="text-foreground">Minimum Withdrawal:</strong> $50</p>
+                        <p>• <strong className="text-foreground">First Withdrawal:</strong> After 7 calendar days of funded trading.</p>
+                        <p>• <strong className="text-foreground">Subsequent Withdrawals:</strong> Every 7 days thereafter.</p>
+                      </div>
+                    </div>
+
+                    {/* 30% Consistency Rule */}
+                    <div className="mt-6 p-5 rounded-xl bg-admin/5 border border-admin/20 space-y-4">
+                      <h5 className="font-display font-bold text-lg flex items-center gap-2 text-admin">
+                        <AlertTriangle className="h-5 w-5" /> 30% Consistency Rule
+                      </h5>
+                      <p className="text-sm text-muted-foreground">
+                        Applies <strong className="text-primary">ONLY at withdrawal</strong>. Does NOT cause account breach.
+                      </p>
+
+                      <div className="space-y-2 text-sm">
+                        <p><strong className="text-foreground">Rule:</strong> Highest profit in a single day must be ≤ 30% of total profit.</p>
+                        <p><strong className="text-foreground">Formula:</strong> <code className="bg-muted px-2 py-1 rounded text-xs">Max Single Day Profit ≤ 30% × Total Profit</code></p>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <p className="font-semibold text-foreground">If violated:</p>
                         <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                          <li>Avoid generating a large portion of profit in a single day</li>
-                          <li>Maintain consistent daily profits across multiple days</li>
-                          <li>Lot size and risk should remain relatively stable</li>
-                          <li>Before requesting withdrawal, ensure compliance with the 30% rule</li>
-                          <li>If needed, continue trading to increase total profit and balance the ratio</li>
+                          <li>Withdrawal rejected or adjusted</li>
+                          <li>Account is NOT breached</li>
+                          <li>Continue trading to increase total profit and fix the ratio</li>
                         </ul>
                       </div>
+
+                      <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                        <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20 space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-destructive text-sm">
+                            <XCircle className="h-4 w-4" /> Violation Example
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>Total Profit = $1,000</p>
+                            <p>Highest Single Day = $400</p>
+                            <p>30% of $1,000 = $300</p>
+                            <p className="text-destructive font-medium">$400 &gt; $300 → REJECTED</p>
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-primary text-sm">
+                            <CheckCircle className="h-4 w-4" /> Valid Example
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>Total Profit = $1,000</p>
+                            <p>Highest Single Day = $250</p>
+                            <p>30% of $1,000 = $300</p>
+                            <p className="text-primary font-medium">$250 ≤ $300 → APPROVED</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-sm text-muted-foreground">
+                        <strong className="text-foreground">Alert System:</strong> If your account is near the drawdown limit, you will receive an email: <em>"Your account is close to breach. Please manage risk."</em>
+                      </p>
                     </div>
                   </Card>
                 )}
