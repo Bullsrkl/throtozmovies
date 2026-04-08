@@ -62,7 +62,7 @@ export default function Rules() {
               <TabsContent key={type} value={type}>
                 <Card className="overflow-hidden border-border gradient-card cream-hover mb-6">
                   <div className="p-4 bg-primary/5 border-b border-border">
-                    <h3 className="font-display font-bold text-lg">{typeLabels[type]}</h3>
+                    <h3 className="font-display font-bold text-lg">{type === "instant_10" ? "$10 Instant Funded Account" : typeLabels[type] || type}</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
