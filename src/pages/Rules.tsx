@@ -52,8 +52,12 @@ export default function Rules() {
             <TabsTrigger value="instant_10" className="flex-1">$10 Instant</TabsTrigger>
           </TabsList>
 
-          {["two_step", "one_step", "instant"].map((type) => {
-            const typePlans = plans.filter((p) => p.challenge_type === type);
+          {["two_step", "one_step", "instant", "instant_10"].map((type) => {
+            const typePlans = type === "instant_10"
+              ? plans.filter((p) => p.challenge_type === "instant" && p.price_usd === 10 && p.account_size === 5000)
+              : type === "instant"
+              ? plans.filter((p) => p.challenge_type === "instant" && !(p.price_usd === 10 && p.account_size === 5000))
+              : plans.filter((p) => p.challenge_type === type);
             return (
               <TabsContent key={type} value={type}>
                 <Card className="overflow-hidden border-border gradient-card cream-hover mb-6">
