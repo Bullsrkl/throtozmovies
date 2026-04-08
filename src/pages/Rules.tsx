@@ -49,6 +49,7 @@ export default function Rules() {
             <TabsTrigger value="two_step" className="flex-1">2-Step</TabsTrigger>
             <TabsTrigger value="one_step" className="flex-1">1-Step</TabsTrigger>
             <TabsTrigger value="instant" className="flex-1">Instant</TabsTrigger>
+            <TabsTrigger value="instant_10" className="flex-1">$10 Instant</TabsTrigger>
           </TabsList>
 
           {["two_step", "one_step", "instant"].map((type) => {
