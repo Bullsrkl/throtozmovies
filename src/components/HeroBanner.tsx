@@ -105,11 +105,20 @@ export function FundingModels() {
   const navigate = useNavigate();
   const models = [
     {
+      icon: DollarSign,
+      title: "$10 Instant Funded",
+      description: "Start with just $10. Get a $5,000 funded account instantly.",
+      tag: "Low Cost Entry",
+      gradient: "gradient-card-amber",
+      link: "/buy-challenge?type=instant_10",
+    },
+    {
       icon: Zap,
       title: "Instant Account",
       description: "Skip the evaluation. Get funded immediately with our instant funding option.",
       tag: "+20% premium",
       gradient: "gradient-card-amber",
+      link: "/buy-challenge?type=instant",
     },
     {
       icon: Target,
@@ -117,6 +126,7 @@ export function FundingModels() {
       description: "Pass a single evaluation phase and receive your funded account.",
       tag: "Popular",
       gradient: "gradient-card-green",
+      link: "/buy-challenge?type=one_step",
     },
     {
       icon: BarChart3,
@@ -124,6 +134,7 @@ export function FundingModels() {
       description: "Complete two evaluation phases at the lowest price point.",
       tag: "Best Value",
       gradient: "gradient-card-teal",
+      link: "/buy-challenge?type=two_step",
     },
   ];
 
