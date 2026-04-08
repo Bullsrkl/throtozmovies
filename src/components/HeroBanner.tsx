@@ -147,15 +147,15 @@ export function FundingModels() {
             Choose the evaluation path that suits your trading style
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {models.map((model, i) => (
             <Card
               key={i}
               className={`relative p-6 ${model.gradient} border-border hover:border-primary/30 transition-all cursor-pointer group cream-hover`}
-              onClick={() => navigate("/buy-challenge")}
+              onClick={() => navigate(model.link)}
             >
-              {model.tag === "Popular" && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground text-xs font-semibold">
+              {(model.tag === "Popular" || model.tag === "Low Cost Entry") && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground text-xs font-semibold whitespace-nowrap">
                   {model.tag}
                 </div>
               )}

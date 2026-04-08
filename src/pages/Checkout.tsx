@@ -183,7 +183,7 @@ export default function Checkout() {
     } catch { toast({ title: "Something went wrong", variant: "destructive" }); } finally { setSubmitting(false); }
   }, [user, transactionId, screenshotFile, size, type, discountApplied, discountCode, toast, navigate]);
 
-  if (!size || !BASE_PRICES[size]) return null;
+  if (!isInstant10 && (!size || !BASE_PRICES[size])) return null;
 
 
   return (

@@ -27,10 +27,29 @@ function RulesPreview() {
   );
 }
 
+function HighlightBanner() {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="relative overflow-hidden bg-gradient-to-r from-primary via-primary-light to-primary text-primary-foreground cursor-pointer"
+      onClick={() => navigate("/buy-challenge?type=instant_10")}
+    >
+      {/* Shimmer overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+      <div className="container mx-auto px-4 py-3 flex items-center justify-center gap-3 text-sm md:text-base font-semibold">
+        <span className="bg-primary-foreground/20 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">New</span>
+        <span>Get a $5,000 Funded Account for just $10</span>
+        <ArrowRight className="h-4 w-4" />
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <HighlightBanner />
       <HeroBanner />
       <FundingModels />
       <Features />
