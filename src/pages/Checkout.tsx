@@ -23,6 +23,7 @@ const BASE_PRICES: Record<number, number> = {
 type ChallengeType = "instant" | "one_step" | "two_step";
 
 function getPrice(size: number, type: string): number {
+  if (type === "instant_10") return 10;
   const base = BASE_PRICES[size];
   if (!base) return 0;
   if (type === "one_step") return Math.round(base * 1.1 * 10) / 10;
@@ -34,6 +35,7 @@ const TYPE_LABELS: Record<string, string> = {
   two_step: "2-Step Challenge",
   one_step: "1-Step Challenge",
   instant: "Instant Funding",
+  instant_10: "$10 Instant Funded",
 };
 
 export default function Checkout() {
