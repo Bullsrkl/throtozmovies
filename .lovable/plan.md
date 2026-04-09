@@ -1,61 +1,50 @@
 
 
-# Plan: $10 Instant Funded Account + Homepage Highlight Banner
+# Plan: $10 Instant Account — Strict Profit Limits + Tuesday-Only Withdrawal
 
 ## Summary
 
-Add a new "$10 Instant Funded" plan with custom rules (3% daily DD, 6% max DD, 3 min days, 80% profit split) across the entire system — database, Buy Challenge page, Rules page, Checkout, and homepage. Plus add a highlight banner above the hero section promoting this plan.
+Add three new rules specific to the $10 instant account:
+1. **Daily Profit Limit: 3%** (same as daily DD) — breached if exceeded
+2. **Maximum Profit Limit: 6%** (same as overall DD) — breached if exceeded  
+3. **Withdrawal: Only on Tuesdays, max $50/week**
 
 ## Changes
 
-### 1. Database: Insert New Challenge Plan
-**Migration** — Insert a new row into `challenge_plans`:
-- account_size: 5000, challenge_type: `instant`, price_usd: 10
-- daily_drawdown_limit: 3, overall_drawdown_limit: 6
-- profit_target_phase1: 0, profit_target_phase2: 0
-- min_trading_days: 3
+### 1. Rules Page (`src/pages/Rules.tsx`)
+Update the `instant_10` rules section to include:
+- **Daily Profit Limit:** 3% — if profit in a single day exceeds 3% of account size ($150), account is breached
+- **Maximum Profit Cap:** 6% — if total profit exceeds 6% of account size ($300), account is breached
+- **Withdrawal Day:** Only Tuesday (system blocks requests on other days)
+- **Max Withdrawal:** $50 per week
+- Clear breach warnings with examples
 
 ### 2. Buy Challenge Page (`src/pages/BuyChallenge.tsx`)
-- Add `instant_10` as a new challenge type option (4th tab: "$10 Instant")
-- When selected, lock account size to $5K, price to $10
-- Show custom rules: 3% daily DD, 6% max DD, 3 min days, 80% profit split, 30% consistency
-- Features list shows "Profit Split up to 80%" instead of 90%
-- Tag: "Low Cost Entry" badge on the card
+- Update `RULES.instant_10` to add `profitLimit: "3% daily / 6% max"` 
+- Show profit limit rule in the features list for $10 Instant cards
+- Add "Tuesday Only" withdrawal note
 
-### 3. Checkout Page (`src/pages/Checkout.tsx`)
-- Handle `type=instant_10` — hardcode price $10, size $5000
-- Everything else (payment flow, modal) stays the same
+### 3. Wallet Page (`src/components/dashboard/Wallet.tsx`)
+- Detect if selected account is a $10 instant account (challenge_type === "instant" && account_size === 5000 && price === 10, or simpler: check account_size === 5000 from challenge_plans)
+- For $10 accounts:
+  - Set `MIN_WITHDRAWAL = 50` and `MAX_WITHDRAWAL = 50`
+  - Check if today is Tuesday (`new Date().getDay() === 2`) — if not, disable withdrawal button with message "Withdrawals only available on Tuesdays"
+  - Check if user already withdrew this week (query `withdrawals` table for last 7 days)
+  - Show these restrictions in the UI with warning badges
 
-### 4. Rules Page (`src/pages/Rules.tsx`)
-- Add a 4th tab or a dedicated section for "$10 Instant Funded Account Rules"
-- Display all detailed rules: 3% daily DD, 6% max DD, 3 min days, profit split 70% initial up to 80%, withdrawal $50 min, first after 7 days then every 7 days
-- Include full 30% consistency rule explanation (already exists for instant, reuse)
+### 4. Funding Models on Homepage (`src/components/HeroBanner.tsx`)
+- Update $10 Instant card description to mention profit limits and Tuesday withdrawal
 
-### 5. Funding Models Card (`src/components/HeroBanner.tsx` — FundingModels section)
-- Add a 4th card for "$10 Instant Funded" with "Low Cost Entry" tag
-- Description: "Start with just $10. Get a $5,000 funded account instantly."
+## Files Modified
 
-### 6. Homepage Highlight Banner (`src/pages/Index.tsx`)
-- Add a slim, eye-catching banner **above** the HeroBanner
-- Teal gradient background, text: "NEW: Get a $5,000 Funded Account for just $10 →"
-- Clickable, navigates to `/buy-challenge` with instant_10 preselected
-- Subtle shimmer animation
-
-### 7. Dashboard Display
-- No changes needed — existing Trading Accounts, Wallet, and drawdown display already work with any `challenge_plans` entry. The new plan's drawdown limits (3%/6%) will auto-display via the existing joins.
-
-## Files Modified/Created
-
-1. **Database migration** — Insert `$10 instant` plan into `challenge_plans`
-2. `src/pages/BuyChallenge.tsx` — Add instant_10 type, custom rules display
-3. `src/pages/Checkout.tsx` — Handle instant_10 pricing
-4. `src/pages/Rules.tsx` — Add $10 instant rules section
-5. `src/components/HeroBanner.tsx` — Add 4th funding model card
-6. `src/pages/Index.tsx` — Add highlight banner above hero
+1. `src/pages/Rules.tsx` — Add profit limit rules + Tuesday withdrawal to $10 section
+2. `src/pages/BuyChallenge.tsx` — Update rules display for instant_10
+3. `src/components/dashboard/Wallet.tsx` — Enforce Tuesday-only, $50 max, weekly limit
+4. `src/components/HeroBanner.tsx` — Update funding model card text
 
 ## Technical Details
-- The $10 plan uses `challenge_type: instant` in the DB but is distinguished by its unique `account_size: 5000` + `price_usd: 10` combination
-- Alternatively, we can add a new enum value `instant_10` to `challenge_type` — this keeps it cleanly separated. This requires an ALTER TYPE migration.
-- Risk engine logic (daily DD tracking, breach) is admin-side/manual currently — no code changes needed, the rules are stored in `challenge_plans` and displayed in dashboard
-- The highlight banner uses `position: sticky` or just renders as a div above the hero
+- Profit limit enforcement (3% daily, 6% max) is admin-side — the platform displays the rules, admin monitors and breaches accounts. No automated breach logic needed in frontend.
+- Tuesday check: `new Date().getDay() === 2` (0=Sun, 2=Tue)
+- Weekly withdrawal check: query `withdrawals` where `requested_at > now() - 7 days` and `user_id` matches
+- Need to fetch `price_usd` in addition to `account_size` in Wallet's purchase join to identify $10 accounts
 
