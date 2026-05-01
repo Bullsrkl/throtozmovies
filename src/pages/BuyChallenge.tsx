@@ -32,11 +32,11 @@ const CHALLENGE_TYPES = [
   { value: "instant_10", label: "$10 Instant", icon: DollarSign, gradient: "gradient-card-amber" },
 ];
 
-const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string; profitSplit: string }> = {
+const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string; profitSplit: string; profitLimit?: string }> = {
   two_step: { profitTarget: "8%", phase2: "5%", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No", profitSplit: "Up to 90%" },
   one_step: { profitTarget: "10%", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No", profitSplit: "Up to 90%" },
   instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "30% at withdrawal", profitSplit: "Up to 90%" },
-  instant_10: { profitTarget: "—", phase2: "—", dailyDD: "3%", overallDD: "6%", minDays: "3 Days", consistency: "30% at withdrawal", profitSplit: "Up to 80%" },
+  instant_10: { profitTarget: "—", phase2: "—", dailyDD: "3%", overallDD: "6%", minDays: "3 Days", consistency: "30% at withdrawal", profitSplit: "Up to 80%", profitLimit: "3% daily / 6% max" },
 };
 
 export default function BuyChallenge() {
@@ -67,9 +67,11 @@ export default function BuyChallenge() {
         "No Evaluation Required",
         "3% Daily Drawdown",
         "6% Max Drawdown",
+        "Profit Limit: 3% daily / 6% max (breach if exceeded)",
         "Min 3 Trading Days",
         "30% Consistency Rule (at withdrawal)",
         "Profit Split up to 80%",
+        "Withdrawals: Tuesday only, $50/week",
       ]
     : [
         ...(challengeType === "two_step"
