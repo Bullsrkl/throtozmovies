@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Wallet, TrendingUp, CheckCircle, XCircle, Crown, Search, Settings, Menu, X, BarChart3, MessageSquare, Copy, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Wallet, TrendingUp, CheckCircle, XCircle, Crown, Search, Settings, Menu, X, BarChart3, MessageSquare, Copy, Clock, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { KingMakerAdmin } from "@/components/admin/KingMakerAdmin";
 
 const SIDEBAR_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -19,6 +20,7 @@ const SIDEBAR_ITEMS = [
   { key: "history", label: "History", icon: Clock },
   { key: "users", label: "Users", icon: Users },
   { key: "reports", label: "Reports", icon: MessageSquare },
+  { key: "king_maker", label: "King Maker", icon: Trophy },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -634,6 +636,8 @@ export default function Admin() {
               </CardContent>
             </Card>
           )}
+
+          {activeTab === "king_maker" && <KingMakerAdmin />}
         </main>
       </div>
     </div>
