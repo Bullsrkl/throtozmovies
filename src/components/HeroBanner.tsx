@@ -107,7 +107,7 @@ export function FundingModels() {
     {
       icon: DollarSign,
       title: "$10 Instant Funded",
-      description: "Start with just $10. Get a $5,000 funded account instantly.",
+      description: "$5,000 account for $10. 3% daily / 6% max profit cap. Withdraw $50 every Tuesday only.",
       tag: "Low Cost Entry",
       gradient: "gradient-card-amber",
       link: "/buy-challenge?type=instant_10",
