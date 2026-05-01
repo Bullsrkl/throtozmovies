@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Zap, Target, BarChart3, ArrowRight, DollarSign } from "lucide-react";
+import { CheckCircle, Zap, Target, BarChart3, ArrowRight, DollarSign, Crown } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,6 +19,7 @@ const BASE_PRICES: Record<number, number> = {
 
 function getPrice(size: number, type: string): number {
   if (type === "instant_10") return 10;
+  if (type === "king_maker") return 150;
   const base = BASE_PRICES[size];
   if (type === "one_step") return Math.round(base * 1.1 * 10) / 10;
   if (type === "instant") return Math.round(base * 1.2 * 10) / 10;
@@ -30,6 +31,7 @@ const CHALLENGE_TYPES = [
   { value: "one_step", label: "1-Step", icon: Target, gradient: "gradient-card-green" },
   { value: "instant", label: "Instant", icon: Zap, gradient: "gradient-card-amber" },
   { value: "instant_10", label: "$10 Instant", icon: DollarSign, gradient: "gradient-card-amber" },
+  { value: "king_maker", label: "King Maker", icon: Crown, gradient: "gradient-card-teal" },
 ];
 
 const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: string; overallDD: string; minDays: string; consistency: string; profitSplit: string; profitLimit?: string }> = {
@@ -37,6 +39,7 @@ const RULES: Record<string, { profitTarget: string; phase2: string; dailyDD: str
   one_step: { profitTarget: "10%", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "5 Days", consistency: "No", profitSplit: "Up to 90%" },
   instant: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "30% at withdrawal", profitSplit: "Up to 90%" },
   instant_10: { profitTarget: "—", phase2: "—", dailyDD: "3%", overallDD: "6%", minDays: "3 Days", consistency: "30% at withdrawal", profitSplit: "Up to 80%", profitLimit: "3% daily / 6% max" },
+  king_maker: { profitTarget: "—", phase2: "—", dailyDD: "5%", overallDD: "10%", minDays: "—", consistency: "No", profitSplit: "Up to 90%" },
 };
 
 export default function BuyChallenge() {
@@ -48,7 +51,8 @@ export default function BuyChallenge() {
   const { user } = useAuth();
 
   const isInstant10 = challengeType === "instant_10";
-  const effectiveSize = isInstant10 ? 5000 : selectedSize;
+  const isKingMaker = challengeType === "king_maker";
+  const effectiveSize = isInstant10 ? 5000 : isKingMaker ? 30000 : selectedSize;
   const price = getPrice(effectiveSize, challengeType);
   const rules = RULES[challengeType];
   const currentTypeConfig = CHALLENGE_TYPES.find((c) => c.value === challengeType)!;
