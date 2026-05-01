@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, LogOut, Menu, X, BookOpen } from "lucide-react";
+import { ShoppingCart, User, LogOut, Menu, X, BookOpen, Crown } from "lucide-react";
 import pgLogo from "@/assets/pg-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,6 +41,12 @@ export const Header = () => {
               <Link to="/rules">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Rules
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="cream-ripple text-primary" asChild>
+              <Link to="/king-maker">
+                <Crown className="h-4 w-4 mr-2" />
+                King Maker
               </Link>
             </Button>
             {user ? (
@@ -89,6 +95,12 @@ export const Header = () => {
               <Link to="/rules">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Rules
+              </Link>
+            </Button>
+            <Button variant="ghost" className="w-full justify-start text-primary" asChild onClick={() => setMobileOpen(false)}>
+              <Link to="/king-maker">
+                <Crown className="h-4 w-4 mr-2" />
+                King Maker
               </Link>
             </Button>
             {user ? (
