@@ -224,6 +224,30 @@ export default function Rules() {
                       </div>
                     </div>
 
+                    {/* NEW — Profit Limit Rules */}
+                    <div className="mt-4 p-5 rounded-xl bg-destructive/5 border border-destructive/20 space-y-3">
+                      <h5 className="font-display font-bold text-lg flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-5 w-5" /> Profit Limit Rules (Breach if Exceeded)
+                      </h5>
+                      <p className="text-sm text-muted-foreground">
+                        Unique to the $10 Instant account: profit is also capped daily and overall. Exceeding either limit results in an <strong className="text-destructive">immediate account breach</strong>.
+                      </p>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• <strong className="text-foreground">Daily Profit Limit:</strong> 3% — if profit in a single day exceeds 3% of account size ($150 on $5,000), account is breached.</p>
+                        <p>• <strong className="text-foreground">Maximum Profit Cap:</strong> 6% — if total profit exceeds 6% of account size ($300 on $5,000), account is breached.</p>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-4 mt-2">
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs space-y-1">
+                          <div className="flex items-center gap-2 font-semibold text-destructive"><XCircle className="h-4 w-4" /> Breach Example</div>
+                          <p className="text-muted-foreground">$200 profit in one day on $5,000 → 4% &gt; 3% daily limit → <span className="text-destructive font-medium">BREACHED</span></p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs space-y-1">
+                          <div className="flex items-center gap-2 font-semibold text-primary"><CheckCircle className="h-4 w-4" /> Safe Example</div>
+                          <p className="text-muted-foreground">$120 profit in one day on $5,000 → 2.4% ≤ 3% daily → <span className="text-primary font-medium">OK</span></p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="mt-4 space-y-4">
                       <h5 className="font-display font-bold">Trading Rules</h5>
                       <div className="space-y-2 text-sm text-muted-foreground">
@@ -242,6 +266,9 @@ export default function Rules() {
                       <h5 className="font-display font-bold">Withdrawal Rules</h5>
                       <div className="space-y-2 text-sm text-muted-foreground">
                         <p>• <strong className="text-foreground">Minimum Withdrawal:</strong> $50</p>
+                        <p>• <strong className="text-foreground">Maximum Withdrawal:</strong> $50 per week (fixed)</p>
+                        <p>• <strong className="text-foreground">Withdrawal Day:</strong> <span className="text-primary font-semibold">Tuesday only</span> — system blocks requests on all other days.</p>
+                        <p>• <strong className="text-foreground">Frequency:</strong> One withdrawal per 7-day cycle.</p>
                         <p>• <strong className="text-foreground">First Withdrawal:</strong> After 7 calendar days of funded trading.</p>
                         <p>• <strong className="text-foreground">Subsequent Withdrawals:</strong> Every 7 days thereafter.</p>
                       </div>

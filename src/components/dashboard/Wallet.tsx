@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock, Send } from "lucide-react";
+import { Wallet as WalletIcon, DollarSign, TrendingUp, Clock, Send, AlertTriangle, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ interface TradingAccount {
   challenge_plans: {
     account_size: number;
     challenge_type: string;
+    price_usd: number;
   };
 }
 
@@ -41,8 +42,10 @@ export function Wallet() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmData, setConfirmData] = useState<any>(null);
 
-  const MIN_WITHDRAWAL = 100;
   const PLATFORM_FEE_PERCENT = 0;
+
+  // Track recent withdrawals (for weekly limit on $10 accounts)
+  const [recentWithdrawalAt, setRecentWithdrawalAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (user) fetchAccounts();
@@ -59,7 +62,7 @@ export function Wallet() {
       const purchaseIds = data.map(a => a.purchase_id);
       const { data: purchases } = await supabase
         .from("challenge_purchases")
-        .select("id, plan_id, challenge_plans(account_size, challenge_type)")
+        .select("id, plan_id, challenge_plans(account_size, challenge_type, price_usd)")
         .in("id", purchaseIds);
 
       const purchaseMap: Record<string, any> = {};
@@ -67,16 +70,42 @@ export function Wallet() {
 
       const enriched = data.map(a => ({
         ...a,
-        challenge_plans: purchaseMap[a.purchase_id] || { account_size: 0, challenge_type: "unknown" },
+        challenge_plans: purchaseMap[a.purchase_id] || { account_size: 0, challenge_type: "unknown", price_usd: 0 },
       })) as TradingAccount[];
 
       setAccounts(enriched);
       if (!selectedAccountId && enriched.length > 0) setSelectedAccountId(enriched[0].id);
     }
     setLoading(false);
+
+    // Fetch most recent withdrawal in last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recent } = await supabase
+      .from("withdrawals")
+      .select("requested_at")
+      .eq("user_id", user!.id)
+      .gte("requested_at", sevenDaysAgo)
+      .order("requested_at", { ascending: false })
+      .limit(1);
+    if (recent && recent.length > 0) setRecentWithdrawalAt(new Date(recent[0].requested_at));
+    else setRecentWithdrawalAt(null);
   };
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId);
+
+  // $10 Instant account detection
+  const isInstant10 = !!selectedAccount &&
+    selectedAccount.challenge_plans.challenge_type === "instant" &&
+    selectedAccount.challenge_plans.account_size === 5000 &&
+    Number(selectedAccount.challenge_plans.price_usd) === 10;
+
+  const MIN_WITHDRAWAL = isInstant10 ? 50 : 100;
+  const MAX_WITHDRAWAL = isInstant10 ? 50 : Infinity;
+
+  const isTuesday = new Date().getDay() === 2;
+  const hasRecentWithdrawal = !!recentWithdrawalAt;
+  const canWithdrawToday = !isInstant10 || (isTuesday && !hasRecentWithdrawal);
+
   const accountProfit = selectedAccount ? Math.max(0, selectedAccount.balance - selectedAccount.challenge_plans.account_size) : 0;
   const eligibleAmount = selectedAccount?.phase === "master" ? accountProfit : 0;
   const eligibilityPercent = MIN_WITHDRAWAL > 0 ? Math.min(100, (eligibleAmount / MIN_WITHDRAWAL) * 100) : 0;
@@ -87,6 +116,15 @@ export function Wallet() {
 
     if (!withdrawalAmount || withdrawalAmount < MIN_WITHDRAWAL) {
       toast.error(`Minimum withdrawal is $${MIN_WITHDRAWAL}`); return;
+    }
+    if (withdrawalAmount > MAX_WITHDRAWAL) {
+      toast.error(`Maximum withdrawal for this account is $${MAX_WITHDRAWAL}`); return;
+    }
+    if (isInstant10 && !isTuesday) {
+      toast.error("Withdrawals for $10 Instant accounts are only available on Tuesdays"); return;
+    }
+    if (isInstant10 && hasRecentWithdrawal) {
+      toast.error("You have already withdrawn this week. Only one withdrawal per 7 days is allowed on $10 Instant accounts."); return;
     }
     if (withdrawalAmount > eligibleAmount) {
       toast.error("Amount exceeds eligible withdrawal balance"); return;
