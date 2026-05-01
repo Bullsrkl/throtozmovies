@@ -250,11 +250,39 @@ export function Wallet() {
       <Card className="gradient-card">
         <CardHeader><CardTitle>Request Withdrawal</CardTitle></CardHeader>
         <CardContent>
+          {isInstant10 && (
+            <div className="mb-4 p-3 rounded-lg bg-admin/5 border border-admin/20 space-y-2 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-admin">
+                <AlertTriangle className="h-4 w-4" /> $10 Instant Account Withdrawal Rules
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Tuesdays only</li>
+                <li>Fixed $50 per week</li>
+                <li>One withdrawal per 7-day cycle</li>
+              </ul>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Badge variant={isTuesday ? "default" : "destructive"} className="text-[10px]">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {isTuesday ? "Today is Tuesday ✓" : "Not Tuesday — withdrawals blocked"}
+                </Badge>
+                {hasRecentWithdrawal && (
+                  <Badge variant="destructive" className="text-[10px]">Already withdrew this week</Badge>
+                )}
+              </div>
+            </div>
+          )}
           <form onSubmit={handlePayout} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Amount (USD)</Label>
-                <Input type="number" step="0.01" placeholder="Min $100" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={isInstant10 ? "$50 (fixed)" : `Min $${MIN_WITHDRAWAL}`}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={isInstant10 && !canWithdrawToday}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Network</Label>
@@ -278,9 +306,19 @@ export function Wallet() {
               <span>Withdrawals are processed within 24 hours</span>
             </div>
 
-            <Button type="submit" disabled={submitting || eligibleAmount < MIN_WITHDRAWAL} className="w-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground cream-ripple">
+            <Button
+              type="submit"
+              disabled={submitting || eligibleAmount < MIN_WITHDRAWAL || (isInstant10 && !canWithdrawToday)}
+              className="w-full bg-gradient-to-r from-primary to-primary-light text-primary-foreground cream-ripple"
+            >
               <Send className="h-4 w-4 mr-2" />
-              {submitting ? "Submitting..." : "Request Payout"}
+              {submitting
+                ? "Submitting..."
+                : isInstant10 && !isTuesday
+                ? "Available on Tuesdays Only"
+                : isInstant10 && hasRecentWithdrawal
+                ? "Already Withdrawn This Week"
+                : "Request Payout"}
             </Button>
           </form>
         </CardContent>
