@@ -11,6 +11,7 @@ import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Rules from "./pages/Rules";
+import KingMaker from "./pages/KingMaker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/rules" element={<Rules />} />
+            <Route path="/king-maker" element={<KingMaker />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

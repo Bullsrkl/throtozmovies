@@ -2,7 +2,7 @@ import { Header } from "@/components/Header";
 import pgLogo from "@/assets/pg-logo.png";
 import { HeroBanner, FundingModels, Features, HowItWorks } from "@/components/HeroBanner";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function RulesPreview() {
@@ -21,6 +21,31 @@ function RulesPreview() {
           onClick={() => navigate("/rules")}
         >
           View All Rules <ArrowRight className="h-5 w-5 ml-2" />
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function KingMakerHero() {
+  const navigate = useNavigate();
+  return (
+    <section
+      className="relative overflow-hidden cursor-pointer border-b border-border bg-gradient-to-r from-primary via-primary-light to-primary text-primary-foreground"
+      onClick={() => navigate("/king-maker")}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.2),transparent_60%)]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+      <div className="relative container mx-auto px-4 py-8 md:py-14 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/20 border border-primary-foreground/30 text-xs md:text-sm font-bold uppercase tracking-wider mb-3">
+          <Crown className="h-4 w-4" /> King Maker Event • 500 Winners
+        </div>
+        <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-extrabold leading-tight mb-3 drop-shadow-lg">
+          FREE $30K MASTER ACCOUNT
+        </h2>
+        <p className="text-sm md:text-lg opacity-95 mb-4">Complete 5 simple tasks. Get randomly selected. Win a fully funded master account.</p>
+        <Button size="lg" variant="secondary" className="font-bold" onClick={(e) => { e.stopPropagation(); navigate("/king-maker"); }}>
+          Enter the Event <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
     </section>
@@ -49,6 +74,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <KingMakerHero />
       <HighlightBanner />
       <HeroBanner />
       <FundingModels />

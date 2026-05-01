@@ -233,6 +233,135 @@ export type Database = {
           },
         ]
       }
+      event_settings: {
+        Row: {
+          banner_image_url: string | null
+          banner_subtitle: string
+          banner_title: string
+          event_name: string
+          id: string
+          instagram_profile_url: string | null
+          is_active: boolean
+          poster_image_url: string | null
+          result_announcement_at: string
+          total_winners: number
+          updated_at: string
+          winners_announced: boolean
+        }
+        Insert: {
+          banner_image_url?: string | null
+          banner_subtitle?: string
+          banner_title?: string
+          event_name?: string
+          id: string
+          instagram_profile_url?: string | null
+          is_active?: boolean
+          poster_image_url?: string | null
+          result_announcement_at?: string
+          total_winners?: number
+          updated_at?: string
+          winners_announced?: boolean
+        }
+        Update: {
+          banner_image_url?: string | null
+          banner_subtitle?: string
+          banner_title?: string
+          event_name?: string
+          id?: string
+          instagram_profile_url?: string | null
+          is_active?: boolean
+          poster_image_url?: string | null
+          result_announcement_at?: string
+          total_winners?: number
+          updated_at?: string
+          winners_announced?: boolean
+        }
+        Relationships: []
+      }
+      king_maker_participants: {
+        Row: {
+          created_at: string
+          id: string
+          is_winner: boolean
+          joined: boolean
+          joined_at: string | null
+          task1_buy_10_completed: boolean
+          task2_completed: boolean
+          task2_instagram_id: string | null
+          task3_screenshot_url: string | null
+          task3_status: string
+          task3_submitted_at: string | null
+          task4_progress: number
+          task4_reels_completed: boolean
+          task5_screenshot_url: string | null
+          task5_status: string
+          task5_submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_winner?: boolean
+          joined?: boolean
+          joined_at?: string | null
+          task1_buy_10_completed?: boolean
+          task2_completed?: boolean
+          task2_instagram_id?: string | null
+          task3_screenshot_url?: string | null
+          task3_status?: string
+          task3_submitted_at?: string | null
+          task4_progress?: number
+          task4_reels_completed?: boolean
+          task5_screenshot_url?: string | null
+          task5_status?: string
+          task5_submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_winner?: boolean
+          joined?: boolean
+          joined_at?: string | null
+          task1_buy_10_completed?: boolean
+          task2_completed?: boolean
+          task2_instagram_id?: string | null
+          task3_screenshot_url?: string | null
+          task3_status?: string
+          task3_submitted_at?: string | null
+          task4_progress?: number
+          task4_reels_completed?: boolean
+          task5_screenshot_url?: string | null
+          task5_status?: string
+          task5_submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      king_maker_reels: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          reel_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position: number
+          reel_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          reel_url?: string
+        }
+        Relationships: []
+      }
       movies: {
         Row: {
           category: string
@@ -881,10 +1010,10 @@ export type Database = {
       }
     }
     Enums: {
-      account_phase: "phase1" | "phase2" | "master"
+      account_phase: "phase1" | "phase2" | "master" | "king_maker_master"
       account_status: "active" | "passed" | "failed" | "funded"
       app_role: "admin" | "creator" | "user"
-      challenge_type: "instant" | "one_step" | "two_step"
+      challenge_type: "instant" | "one_step" | "two_step" | "king_maker"
       purchase_status:
         | "pending_payment"
         | "payment_submitted"
@@ -1019,10 +1148,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_phase: ["phase1", "phase2", "master"],
+      account_phase: ["phase1", "phase2", "master", "king_maker_master"],
       account_status: ["active", "passed", "failed", "funded"],
       app_role: ["admin", "creator", "user"],
-      challenge_type: ["instant", "one_step", "two_step"],
+      challenge_type: ["instant", "one_step", "two_step", "king_maker"],
       purchase_status: [
         "pending_payment",
         "payment_submitted",
