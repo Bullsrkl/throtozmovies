@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Crown, CheckCircle2, Circle, Instagram, Upload, Download, Copy, ExternalLink, Trophy, Loader2 } from "lucide-react";
+import { Crown, CheckCircle2, Circle, Instagram, Upload, Download, Copy, ExternalLink, Trophy, Loader2, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -75,6 +75,9 @@ export default function KingMaker() {
   const [submittingIg, setSubmittingIg] = useState(false);
   const [uploadingTask, setUploadingTask] = useState<3 | 5 | null>(null);
   const [reelDone, setReelDone] = useState<Record<number, boolean>>({});
+  const [reelPlayed, setReelPlayed] = useState<Record<number, boolean>>({});
+  const [reelRemaining, setReelRemaining] = useState<Record<number, number>>({});
+  const reelStartedAt = useRef<Record<number, number>>({});
   const [joinedUsers, setJoinedUsers] = useState<any[]>([]);
   const fileRef3 = useRef<HTMLInputElement>(null);
   const fileRef5 = useRef<HTMLInputElement>(null);
@@ -173,6 +176,29 @@ export default function KingMaker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Reel countdown ticker (1s)
+  useEffect(() => {
+    const i = setInterval(() => {
+      const starts = reelStartedAt.current;
+      const positions = Object.keys(starts).map(Number);
+      if (positions.length === 0) return;
+      setReelRemaining((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const pos of positions) {
+          const elapsed = Math.floor((Date.now() - starts[pos]) / 1000);
+          const remaining = Math.max(0, 60 - elapsed);
+          if (next[pos] !== remaining) {
+            next[pos] = remaining;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(i);
+  }, []);
+
   const tasksDone = useMemo(() => {
     if (!participant) return [false, false, false, false, false];
     return [
@@ -238,6 +264,13 @@ export default function KingMaker() {
     refreshParticipant();
   };
 
+  const playReel = (pos: number, url: string) => {
+    window.open(url, "_blank");
+    setReelPlayed((prev) => ({ ...prev, [pos]: true }));
+    reelStartedAt.current[pos] = Date.now();
+    setReelRemaining((prev) => ({ ...prev, [pos]: 60 }));
+  };
+
   const markReelDone = async (pos: number) => {
     setReelDone((prev) => ({ ...prev, [pos]: true }));
     const newCount = Object.keys({ ...reelDone, [pos]: true }).length;
@@ -275,7 +308,22 @@ export default function KingMaker() {
       toast.error("Poster not yet uploaded by admin");
       return;
     }
-    window.open(event.poster_image_url, "_blank");
+    try {
+      const res = await fetch(event.poster_image_url);
+      const blob = await res.blob();
+      const ext = (event.poster_image_url.split(".").pop() || "jpg").split("?")[0];
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `prop-gym-king-maker-poster.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Poster downloaded");
+    } catch {
+      window.open(event.poster_image_url, "_blank");
+    }
   };
 
   if (authLoading || loading || !event) {
@@ -400,16 +448,37 @@ export default function KingMaker() {
           {/* Task 4 — Reels */}
           <Card className="p-5 gradient-card">
             <TaskHeader idx={4} title="Watch & like 4 Reels" done={tasksDone[3]} />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <p className="text-xs text-muted-foreground mb-3">
+              Click <strong>Play Reel</strong>, watch it for 60 seconds, then the Done button will unlock.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {reels.map((r) => {
                 const done = reelDone[r.position] || tasksDone[3];
+                const played = reelPlayed[r.position] || done;
+                const remaining = reelRemaining[r.position] ?? (played ? 0 : 60);
+                const ready = played && remaining <= 0;
+                let label: React.ReactNode = "Done";
+                if (done) label = <><CheckCircle2 className="h-4 w-4 mr-1" />Done</>;
+                else if (!played) label = "Play first";
+                else if (!ready) label = `Wait ${remaining}s`;
                 return (
-                  <div key={r.id} className="flex flex-col gap-1">
-                    <Button variant="outline" size="sm" onClick={() => window.open(r.reel_url, "_blank")}>
-                      Reel #{r.position}
+                  <div key={r.id} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-card/40">
+                    <div className="text-sm font-semibold">Reel #{r.position}</div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => !done && playReel(r.position, r.reel_url)}
+                      disabled={done}
+                    >
+                      <Play className="h-4 w-4 mr-1" /> Play Reel
                     </Button>
-                    <Button size="sm" variant={done ? "default" : "secondary"} onClick={() => !done && markReelDone(r.position)} disabled={done}>
-                      {done ? <CheckCircle2 className="h-4 w-4" /> : "Done"}
+                    <Button
+                      size="sm"
+                      variant={done ? "default" : "secondary"}
+                      onClick={() => ready && !done && markReelDone(r.position)}
+                      disabled={done || !ready}
+                    >
+                      {label}
                     </Button>
                   </div>
                 );
@@ -420,6 +489,17 @@ export default function KingMaker() {
           {/* Task 5 — Poster share */}
           <Card className="p-5 gradient-card">
             <TaskHeader idx={5} title="Share poster on your Instagram story" done={tasksDone[4]} />
+            {event.poster_image_url ? (
+              <div className="mb-3">
+                <img
+                  src={event.poster_image_url}
+                  alt="King Maker Poster"
+                  className="max-h-64 w-auto rounded-lg border border-border shadow-sm"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mb-3">Poster will appear here once admin uploads it.</p>
+            )}
             <div className="flex flex-wrap gap-2 mb-3">
               <Button size="sm" variant="outline" onClick={downloadPoster}>
                 <Download className="h-4 w-4 mr-2" /> Download Poster
