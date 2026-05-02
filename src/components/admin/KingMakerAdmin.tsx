@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Crown, Trophy, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Crown, Trophy, Loader2, CheckCircle2, XCircle, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +18,8 @@ export function KingMakerAdmin() {
   const [saving, setSaving] = useState(false);
   const [picking, setPicking] = useState(false);
   const [viewUser, setViewUser] = useState<any | null>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
 
   const load = async () => {
     const [{ data: e }, { data: r }, { data: p }] = await Promise.all([
@@ -55,6 +57,24 @@ export function KingMakerAdmin() {
     await supabase.from("king_maker_reels").update({ reel_url: url }).eq("id", id);
     toast.success("Reel updated");
     load();
+  };
+
+  const uploadEventImage = async (kind: "banner" | "poster", file: File) => {
+    const setBusy = kind === "banner" ? setUploadingBanner : setUploadingPoster;
+    setBusy(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `admin/${kind}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("king-maker-uploads").upload(path, file, { upsert: true });
+    if (upErr) {
+      toast.error("Upload failed: " + upErr.message);
+      setBusy(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("king-maker-uploads").getPublicUrl(path);
+    const field = kind === "banner" ? "banner_image_url" : "poster_image_url";
+    setEvent((prev: any) => ({ ...prev, [field]: urlData.publicUrl }));
+    setBusy(false);
+    toast.success(`${kind === "banner" ? "Banner" : "Poster"} uploaded — click Save Event to apply`);
   };
 
   const pickWinners = async () => {
@@ -150,9 +170,45 @@ export function KingMakerAdmin() {
               <div><Label>Total Winners</Label><Input type="number" value={event.total_winners} onChange={(e) => setEvent({ ...event, total_winners: e.target.value })} /></div>
               <div className="sm:col-span-2"><Label>Banner Title</Label><Input value={event.banner_title} onChange={(e) => setEvent({ ...event, banner_title: e.target.value })} /></div>
               <div className="sm:col-span-2"><Label>Banner Subtitle</Label><Input value={event.banner_subtitle} onChange={(e) => setEvent({ ...event, banner_subtitle: e.target.value })} /></div>
-              <div className="sm:col-span-2"><Label>Banner Image URL</Label><Input value={event.banner_image_url || ""} onChange={(e) => setEvent({ ...event, banner_image_url: e.target.value })} placeholder="https://..." /></div>
+              <div className="sm:col-span-2 space-y-2">
+                <Label>Banner Image</Label>
+                {event.banner_image_url && (
+                  <img src={event.banner_image_url} alt="Banner" className="max-h-40 rounded border border-border object-cover" />
+                )}
+                <div>
+                  <input
+                    id="banner-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && uploadEventImage("banner", e.target.files[0])}
+                  />
+                  <Button type="button" size="sm" variant="secondary" onClick={() => document.getElementById("banner-upload")?.click()} disabled={uploadingBanner}>
+                    {uploadingBanner ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {event.banner_image_url ? "Replace Banner Image" : "Upload Banner Image"}
+                  </Button>
+                </div>
+              </div>
               <div className="sm:col-span-2"><Label>Instagram Profile URL (Task 3)</Label><Input value={event.instagram_profile_url || ""} onChange={(e) => setEvent({ ...event, instagram_profile_url: e.target.value })} /></div>
-              <div className="sm:col-span-2"><Label>Poster Image URL (Task 5)</Label><Input value={event.poster_image_url || ""} onChange={(e) => setEvent({ ...event, poster_image_url: e.target.value })} placeholder="https://..." /></div>
+              <div className="sm:col-span-2 space-y-2">
+                <Label>Poster Image (Task 5)</Label>
+                {event.poster_image_url && (
+                  <img src={event.poster_image_url} alt="Poster" className="max-h-40 rounded border border-border object-cover" />
+                )}
+                <div>
+                  <input
+                    id="poster-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && uploadEventImage("poster", e.target.files[0])}
+                  />
+                  <Button type="button" size="sm" variant="secondary" onClick={() => document.getElementById("poster-upload")?.click()} disabled={uploadingPoster}>
+                    {uploadingPoster ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {event.poster_image_url ? "Replace Poster Image" : "Upload Poster Image"}
+                  </Button>
+                </div>
+              </div>
               <div className="sm:col-span-2"><Label>Result Announcement Date</Label>
                 <Input type="datetime-local" value={event.result_announcement_at?.slice(0, 16)} onChange={(e) => setEvent({ ...event, result_announcement_at: new Date(e.target.value).toISOString() })} />
               </div>
