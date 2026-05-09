@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -23,6 +23,49 @@ export default function Auth() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+
+  // One-time admin transfer
+  const [showAdminTransfer, setShowAdminTransfer] = useState(false);
+  const [transferEmail, setTransferEmail] = useState("");
+  const [transferPassword, setTransferPassword] = useState("");
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferUsed, setTransferUsed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "admin_transfer_used")
+        .maybeSingle();
+      setTransferUsed(data?.value === "true");
+    })();
+  }, []);
+
+  const handleAdminTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferEmail || transferPassword.length < 8) {
+      toast.error("Valid email aur kam se kam 8 char ka password daalein");
+      return;
+    }
+    setTransferLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("transfer-admin", {
+        body: { new_email: transferEmail.trim(), new_password: transferPassword },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Admin successfully transferred! Ab naye credentials se login karein.");
+      setTransferUsed(true);
+      setShowAdminTransfer(false);
+      setTransferEmail("");
+      setTransferPassword("");
+    } catch (err: any) {
+      toast.error(err.message || "Transfer failed");
+    } finally {
+      setTransferLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -288,6 +331,60 @@ export default function Auth() {
           </div>
         </CardContent>
       </Card>
+
+      {transferUsed === false && (
+        <Card className="w-full max-w-md mt-4 border-destructive/40 bg-destructive/5">
+          <button
+            type="button"
+            onClick={() => setShowAdminTransfer((s) => !s)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
+          >
+            <span className="flex items-center gap-2 text-destructive">
+              <ShieldAlert className="w-4 h-4" />
+              One-Time Admin Transfer
+            </span>
+            {showAdminTransfer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {showAdminTransfer && (
+            <form onSubmit={handleAdminTransfer} className="px-4 pb-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                ⚠️ Ye feature sirf ek baar use ho sakta hai. Naya admin set hone ke baad form permanently disable ho jayega aur purane admin ka access remove ho jayega.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="adminEmail">New Admin Email</Label>
+                <Input
+                  id="adminEmail"
+                  type="email"
+                  value={transferEmail}
+                  onChange={(e) => setTransferEmail(e.target.value)}
+                  required
+                  className="bg-card"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminPassword">New Admin Password (min 8 chars)</Label>
+                <Input
+                  id="adminPassword"
+                  type="password"
+                  value={transferPassword}
+                  onChange={(e) => setTransferPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="bg-card"
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="destructive"
+                className="w-full"
+                disabled={transferLoading}
+              >
+                {transferLoading ? "Transferring..." : "Transfer Admin Access"}
+              </Button>
+            </form>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
