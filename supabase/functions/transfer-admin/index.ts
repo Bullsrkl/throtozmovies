@@ -53,27 +53,70 @@ Deno.serve(async (req) => {
       .single();
     const currentAdminEmail = currentRow?.value;
 
-    // Create new auth user
+    // Try to create new auth user; if already exists, find and update password
+    let newUserId: string | null = null;
     const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email: new_email,
       password: new_password,
       email_confirm: true,
       user_metadata: { full_name: "Admin" },
     });
-    if (createErr || !created.user) {
+
+    if (createErr) {
+      const msg = createErr.message || "";
+      const alreadyExists =
+        msg.toLowerCase().includes("already") ||
+        (createErr as any).code === "email_exists" ||
+        (createErr as any).status === 422;
+
+      if (!alreadyExists) {
+        return new Response(
+          JSON.stringify({ error: msg || "Failed to create user" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // User already exists — locate them via profiles and update password
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", new_email)
+        .maybeSingle();
+
+      if (!existing?.id) {
+        return new Response(
+          JSON.stringify({ error: "Email already registered but profile not found" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      newUserId = existing.id;
+
+      const { error: updErr } = await supabase.auth.admin.updateUserById(newUserId, {
+        password: new_password,
+        email_confirm: true,
+      });
+      if (updErr) {
+        return new Response(
+          JSON.stringify({ error: "Failed to update password: " + updErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else if (created?.user) {
+      newUserId = created.user.id;
+    }
+
+    if (!newUserId) {
       return new Response(
-        JSON.stringify({ error: createErr?.message || "Failed to create user" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Failed to resolve user id" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const newUserId = created.user.id;
-
-    // Assign admin role to new user
+    // Assign admin role to new user (idempotent)
     const { error: roleErr } = await supabase
       .from("user_roles")
-      .insert({ user_id: newUserId, role: "admin" });
-    if (roleErr && !roleErr.message.includes("duplicate")) {
+      .upsert({ user_id: newUserId, role: "admin" }, { onConflict: "user_id,role" });
+    if (roleErr) {
       return new Response(
         JSON.stringify({ error: "Failed to assign admin role: " + roleErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
