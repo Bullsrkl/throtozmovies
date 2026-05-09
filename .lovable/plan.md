@@ -1,38 +1,61 @@
-# Fix: Admin Image Upload RLS Error (King Maker Event Settings)
+## Goal
+Login page (`/auth`) ke neeche ek **One-Time Admin Transfer** form add karna. User new email + new password daalega, "Transfer Admin" click karega, aur:
+- Naya auth user create hoga
+- Naye user ko `admin` role mil jayega
+- Purane admin (`tilaks631@gmail.com`) ka admin role hat jayega (account user ban jayega)
+- Form permanently disable ho jayega (sirf ek baar use ho sakta hai)
 
-## Problem
+## Database Changes (migration)
 
-Jab admin event settings me banner ya poster image upload karne ki koshish karta hai, ek RLS error aata hai aur upload fail ho jata hai.
+1. **`platform_settings` me flag insert karna:**
+   - `key = 'admin_transfer_used'`, `value = 'false'`
 
-**Root cause:** `king-maker-uploads` storage bucket par jo INSERT policy hai, wo sirf un files ko allow karti hai jinka path `{auth.uid()}/...` se start ho. Lekin admin uploads `admin/banner-{timestamp}.jpg` aur `admin/poster-{timestamp}.jpg` path use karte hain — jo policy se match nahi karta, isliye RLS block kar deta hai.
+2. **`handle_new_user` trigger update karna:**
+   - Hardcoded `tilaks631@gmail.com` check hata dena (taaki transfer ke baad wapas admin na ban jaye Google login se)
+   - Iske badle `platform_settings` me ek `current_admin_email` key rakhi jayegi, aur trigger us key se match karega
 
-Current policy:
-```
-(bucket_id = 'king-maker-uploads')
-AND (auth.uid()::text = storage.foldername(name)[1])
-```
+3. **Initial seed:** `current_admin_email = 'tilaks631@gmail.com'`
 
-## Fix
+## Edge Function: `transfer-admin`
 
-Ek nayi storage policy add karenge jo admins ko `admin/` prefix wali files upload, update, aur delete karne deti hai. Existing user policy (apne folder me upload) waise hi rahegi.
+Service role key use karega (admin operations ke liye zaroori).
 
-### Migration
+**Flow:**
+1. Request body validate (zod): `new_email`, `new_password` (min 8 chars)
+2. `platform_settings` se `admin_transfer_used` check — agar `true` he to **403** return karo ("Admin transfer already used")
+3. `supabase.auth.admin.createUser({ email, password, email_confirm: true })` se naya user banao
+4. Naye user ke liye `user_roles` me `admin` role insert karo
+5. Purane admin ka `user_id` `current_admin_email` se nikaalo, uska `admin` role `user_roles` se delete karo
+6. `platform_settings` update: `admin_transfer_used = 'true'`, `current_admin_email = <new_email>`
+7. Success response
 
-Storage `objects` table par 3 nayi RLS policies (sirf `king-maker-uploads` bucket ke `admin/` prefix ke liye, aur sirf jab user ka role `admin` ho — `has_role()` function use karke):
+**Security:**
+- `verify_jwt = false` (public form se call hoga)
+- One-time flag DB me hai, tampering nahi ho sakti
+- Rate-limit ke liye flag hi sufficient he (ek hi successful call possible)
 
-1. **Admins can insert into admin/** — INSERT policy
-2. **Admins can update admin/** — UPDATE policy  
-3. **Admins can delete admin/** — DELETE policy
+## Frontend: `src/pages/Auth.tsx`
 
-Sab policies condition: `bucket_id = 'king-maker-uploads' AND (storage.foldername(name))[1] = 'admin' AND public.has_role(auth.uid(), 'admin')`
+Login card ke neeche ek **collapsible card** "🔐 One-Time Admin Transfer":
+- By default closed/small link: "Transfer Admin Access (one-time)"
+- Click pe expand hoke 2 inputs (new email, new password) + "Transfer" button
+- Submit pe edge function call (`supabase.functions.invoke('transfer-admin', ...)`)
+- Component mount pe `platform_settings` se `admin_transfer_used` fetch karo:
+  - Agar `true` hai to puri section **hide** kardo (form already used)
+- Success toast + form hide; error toast on failure
 
-Public SELECT policy already exists, so display/preview kaam karega.
+## Memory Update
 
-## Files
+`mem://auth/admin-predefined-account` ko update karna — hardcoded email ki jagah note karna ki admin email ab `platform_settings.current_admin_email` se aata hai aur ek baar transfer kiya ja sakta hai.
 
-- New migration file (storage policies only)
-- No frontend code change needed — `KingMakerAdmin.tsx` upload code already correct hai, bas RLS allow karne ki zarurat hai.
+## Files Touched
 
-## After fix
+- **New migration:** flag insert + trigger update
+- **New edge function:** `supabase/functions/transfer-admin/index.ts`
+- **Edited:** `src/pages/Auth.tsx`
+- **Memory:** admin-predefined-account file update
 
-Admin banner/poster images successfully upload honge, preview dikhega, aur "Save Event" se persist hoga.
+## Risks / Notes
+- Form public hai — koi bhi pehla visitor admin transfer kar sakta hai. Aapne confirm kiya: one-time flag se protect. **Aap hi pehle use karein** deploy ke turant baad.
+- Naye admin ka email confirm auto kiya jayega (warna login nahi kar payenge).
+- Old admin account delete nahi hoga, sirf admin role revoke hoga (aapki choice).
