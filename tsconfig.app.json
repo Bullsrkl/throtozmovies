@@ -21,6 +21,10 @@
         "./src/*"
       ]
     },
+    "types": [
+      "node",
+      "vite/client"
+    ],
     "skipLibCheck": true,
     "strict": false,
     "target": "ES2020",

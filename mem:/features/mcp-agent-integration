@@ -1,0 +1,12 @@
+---
+name: MCP Agent Integration
+description: App exposed as an MCP server via @lovable.dev/mcp-js; tools, OAuth, and consent route
+type: feature
+---
+Prop Gym is exposed as an MCP server so AI assistants (ChatGPT, Claude, Cursor) can connect.
+
+- Built with `@lovable.dev/mcp-js` (Supabase stack). Author tools in `src/lib/mcp/tools/`, register in `src/lib/mcp/index.ts`. `mcpPlugin()` in `vite.config.ts` generates `supabase/functions/mcp/index.ts` (AUTO-GENERATED — never hand-edit).
+- Tools: `list_challenge_plans` (public), `list_my_trading_accounts`, `get_my_wallet`, `list_my_purchases` (auth, RLS via forwarded user token).
+- Auth: Supabase OAuth 2.1 resource server. Issuer built from `VITE_SUPABASE_PROJECT_ID` (never SUPABASE_URL). Consent page at route `/.lovable/oauth/consent`. `/auth` honors `?next=` to return to consent after login.
+- `supabase/config.toml` sets `[functions.mcp] verify_jwt = false` so mcp-js handles auth itself.
+- After ANY MCP change: run manifest extractor, then redeploy the `mcp` edge function.

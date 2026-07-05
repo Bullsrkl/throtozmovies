@@ -24,6 +24,12 @@ export default function Auth() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
 
+  // Honor a same-origin ?next= redirect (used by the MCP OAuth consent flow).
+  const rawNext = searchParams.get("next");
+  const nextPath =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const redirectUrl = `${window.location.origin}${nextPath}`;
+
   // One-time admin transfer
   const [showAdminTransfer, setShowAdminTransfer] = useState(false);
   const [transferEmail, setTransferEmail] = useState("");
@@ -101,8 +107,8 @@ export default function Auth() {
         }
       })();
     }
-    navigate("/dashboard");
-  }, [user, navigate]);
+    navigate(nextPath);
+  }, [user, navigate, nextPath]);
 
   // Auto-fill referral code from URL
   useEffect(() => {
@@ -145,7 +151,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectUrl,
           queryParams: referralCode.trim() && referrerName ? {
             referral_code: referralCode.trim()
           } : undefined,
@@ -177,7 +183,7 @@ export default function Auth() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: redirectUrl,
             data: metadata,
           }
         });
@@ -187,7 +193,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        navigate(nextPath);
       }
     } catch (error: any) {
       toast.error(error.message);

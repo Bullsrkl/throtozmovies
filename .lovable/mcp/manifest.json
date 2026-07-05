@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://mvjiisufjgrnzaqielra.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "prop-gym-mcp",
+      "version": "0.1.0",
+      "title": "Prop Gym MCP"
+    },
+    "tools": [
+      {
+        "name": "list_challenge_plans",
+        "title": "List challenge plans",
+        "description": "List the available Prop Gym funded-account challenge plans with pricing, account sizes, profit targets, and drawdown limits. Public, no login required.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "challenge_type": {
+              "type": "string",
+              "description": "Optional filter by challenge type, e.g. one_step, two_step, or instant."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_trading_accounts",
+        "title": "List my trading accounts",
+        "description": "List the signed-in user's funded/challenge trading accounts with balance, phase, status, profit progress, and drawdown. Requires login.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_wallet",
+        "title": "Get my wallet",
+        "description": "Get the signed-in user's Prop Gym wallet: current balance, total earnings, and total withdrawn (USD). Requires login.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_purchases",
+        "title": "List my challenge purchases",
+        "description": "List the signed-in user's challenge purchase orders with status, linked plan, and creation date. Requires login.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
