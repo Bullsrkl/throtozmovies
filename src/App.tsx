@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Rules from "./pages/Rules";
 import KingMaker from "./pages/KingMaker";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/rules" element={<Rules />} />
             <Route path="/king-maker" element={<KingMaker />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
