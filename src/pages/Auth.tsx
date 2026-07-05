@@ -107,7 +107,7 @@ export default function Auth() {
         }
       })();
     }
-    navigate("/dashboard");
+    navigate(nextPath);
   }, [user, navigate, nextPath]);
 
   // Auto-fill referral code from URL
@@ -151,7 +151,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectUrl,
           queryParams: referralCode.trim() && referrerName ? {
             referral_code: referralCode.trim()
           } : undefined,
@@ -183,7 +183,7 @@ export default function Auth() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: redirectUrl,
             data: metadata,
           }
         });
