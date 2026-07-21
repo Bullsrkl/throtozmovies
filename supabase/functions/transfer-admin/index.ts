@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,13 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) {
+      console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env");
+      return json({ error: "Server misconfigured: missing service role key" }, 500);
+    }
+
     const { new_email, new_password } = await req.json();
+    console.log("transfer-admin: request received", { new_email });
 
     if (
       typeof new_email !== "string" ||
@@ -20,29 +35,21 @@ Deno.serve(async (req) => {
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(new_email) ||
       new_password.length < 8
     ) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email or password (min 8 chars)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return json({ error: "Invalid email or password (min 8 chars)" }, 400);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     // Check one-time flag
     const { data: flag } = await supabase
       .from("platform_settings")
       .select("value")
       .eq("key", "admin_transfer_used")
-      .single();
+      .maybeSingle();
+    console.log("transfer-admin: flag", flag);
 
     if (flag?.value === "true") {
-      return new Response(
-        JSON.stringify({ error: "Admin transfer has already been used" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return json({ error: "Admin transfer has already been used" }, 403);
     }
 
     // Get current admin email
@@ -50,8 +57,9 @@ Deno.serve(async (req) => {
       .from("platform_settings")
       .select("value")
       .eq("key", "current_admin_email")
-      .single();
+      .maybeSingle();
     const currentAdminEmail = currentRow?.value;
+    console.log("transfer-admin: current admin", currentAdminEmail);
 
     // Try to create new auth user; if already exists, find and update password
     let newUserId: string | null = null;
@@ -64,63 +72,66 @@ Deno.serve(async (req) => {
 
     if (createErr) {
       const msg = createErr.message || "";
+      console.log("transfer-admin: createUser error", msg, (createErr as any).status);
       const alreadyExists =
         msg.toLowerCase().includes("already") ||
+        msg.toLowerCase().includes("registered") ||
         (createErr as any).code === "email_exists" ||
         (createErr as any).status === 422;
 
       if (!alreadyExists) {
-        return new Response(
-          JSON.stringify({ error: msg || "Failed to create user" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return json({ error: msg || "Failed to create user" }, 400);
       }
 
-      // User already exists — locate them via profiles and update password
-      const { data: existing } = await supabase
+      // User already exists — find them via auth admin listing (profiles may not have the row)
+      let existingId: string | null = null;
+      const { data: profileRow } = await supabase
         .from("profiles")
         .select("id")
         .eq("email", new_email)
         .maybeSingle();
-
-      if (!existing?.id) {
-        return new Response(
-          JSON.stringify({ error: "Email already registered but profile not found" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+      if (profileRow?.id) {
+        existingId = profileRow.id;
+      } else {
+        // Fallback: page through auth users
+        for (let page = 1; page <= 20 && !existingId; page++) {
+          const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+          if (listErr) { console.error("listUsers err", listErr); break; }
+          const found = list?.users?.find((u: any) => (u.email || "").toLowerCase() === new_email.toLowerCase());
+          if (found) existingId = found.id;
+          if (!list?.users || list.users.length < 200) break;
+        }
       }
-      newUserId = existing.id;
+
+      if (!existingId) {
+        return json({ error: "Email already registered but user not found" }, 400);
+      }
+      newUserId = existingId;
 
       const { error: updErr } = await supabase.auth.admin.updateUserById(newUserId, {
         password: new_password,
         email_confirm: true,
       });
       if (updErr) {
-        return new Response(
-          JSON.stringify({ error: "Failed to update password: " + updErr.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        console.error("updateUserById err", updErr);
+        return json({ error: "Failed to update password: " + updErr.message }, 500);
       }
     } else if (created?.user) {
       newUserId = created.user.id;
     }
 
     if (!newUserId) {
-      return new Response(
-        JSON.stringify({ error: "Failed to resolve user id" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return json({ error: "Failed to resolve user id" }, 500);
     }
+    console.log("transfer-admin: newUserId", newUserId);
 
     // Assign admin role to new user (idempotent)
     const { error: roleErr } = await supabase
       .from("user_roles")
       .upsert({ user_id: newUserId, role: "admin" }, { onConflict: "user_id,role" });
     if (roleErr) {
-      return new Response(
-        JSON.stringify({ error: "Failed to assign admin role: " + roleErr.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.error("role upsert err", roleErr);
+      return json({ error: "Failed to assign admin role: " + roleErr.message }, 500);
     }
 
     // Revoke admin role from old admin
@@ -139,24 +150,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Mark flag used + update current admin email
-    await supabase
-      .from("platform_settings")
-      .update({ value: "true", updated_at: new Date().toISOString() })
-      .eq("key", "admin_transfer_used");
-    await supabase
-      .from("platform_settings")
-      .update({ value: new_email, updated_at: new Date().toISOString() })
-      .eq("key", "current_admin_email");
+    // Mark flag used + update current admin email (upsert in case rows are missing)
+    await supabase.from("platform_settings").upsert(
+      { key: "admin_transfer_used", value: "true", updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    await supabase.from("platform_settings").upsert(
+      { key: "current_admin_email", value: new_email, updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    console.log("transfer-admin: success");
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Admin transferred successfully" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return json({ success: true, message: "Admin transferred successfully" }, 200);
   } catch (e: any) {
-    return new Response(
-      JSON.stringify({ error: e.message || "Unexpected error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    console.error("transfer-admin fatal", e?.stack || e);
+    return json({ error: e?.message || "Unexpected error" }, 500);
   }
 });
