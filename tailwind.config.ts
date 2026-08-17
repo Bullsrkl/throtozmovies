@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'system-ui', 'sans-serif'],
+        display: ['Sora', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -37,6 +37,18 @@ export default {
           DEFAULT: "hsl(var(--admin))",
           light: "hsl(var(--admin-light))",
           foreground: "hsl(var(--admin-foreground))",
+        },
+        earning: {
+          DEFAULT: "hsl(var(--earning))",
+          light: "hsl(var(--earning-light))",
+        },
+        mvspay: {
+          DEFAULT: "hsl(var(--mvspay))",
+          light: "hsl(var(--mvspay-light))",
+        },
+        points: {
+          DEFAULT: "hsl(var(--points))",
+          light: "hsl(var(--points-light))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

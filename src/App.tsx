@@ -2,16 +2,25 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import BuyChallenge from "./pages/BuyChallenge";
-import Checkout from "./pages/Checkout";
-import Dashboard from "./pages/Dashboard";
+import { RequireAuth } from "@/components/mww/RequireAuth";
+
+import Splash from "./pages/mww/Splash";
+import Onboarding from "./pages/mww/Onboarding";
+import Login from "./pages/mww/Login";
+import Signup from "./pages/mww/Signup";
+import ForgotPassword from "./pages/mww/ForgotPassword";
+import ResetPassword from "./pages/mww/ResetPassword";
+import VerifyOtp from "./pages/mww/VerifyOtp";
+import AccountCreated from "./pages/mww/AccountCreated";
+import Home from "./pages/mww/Home";
+import Wallets from "./pages/mww/Wallets";
+import MvsPay from "./pages/mww/MvsPay";
+import Offers from "./pages/mww/Offers";
+import Profile from "./pages/mww/Profile";
+
 import Admin from "./pages/Admin";
-import Rules from "./pages/Rules";
-import KingMaker from "./pages/KingMaker";
 import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
@@ -25,15 +34,29 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/buy-challenge" element={<BuyChallenge />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/" element={<Splash />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/account-created" element={<AccountCreated />} />
+
+            <Route path="/home" element={<RequireAuth><Home /></RequireAuth>} />
+            <Route path="/wallet" element={<RequireAuth><Wallets /></RequireAuth>} />
+            <Route path="/mvs-pay" element={<RequireAuth><MvsPay /></RequireAuth>} />
+            <Route path="/offers" element={<RequireAuth><Offers /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="/notifications" element={<RequireAuth><Profile /></RequireAuth>} />
+
             <Route path="/admin" element={<Admin />} />
-            <Route path="/rules" element={<Rules />} />
-            <Route path="/king-maker" element={<KingMaker />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
+            {/* Legacy routes */}
+            <Route path="/auth" element={<Navigate to="/login" replace />} />
+            <Route path="/dashboard/*" element={<Navigate to="/home" replace />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
