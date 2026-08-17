@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_announcements: {
+        Row: {
+          body: string | null
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_new: boolean
+          published_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_new?: boolean
+          published_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_new?: boolean
+          published_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           account_id: string
@@ -278,6 +314,54 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_banners: {
+        Row: {
+          accent: string
+          created_at: string
+          cta_link: string | null
+          cta_text: string | null
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          sort_order: number
+          starts_at: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accent?: string
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accent?: string
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       king_maker_participants: {
         Row: {
           created_at: string
@@ -359,6 +443,60 @@ export type Database = {
           id?: string
           position?: number
           reel_url?: string
+        }
+        Relationships: []
+      }
+      member_profiles: {
+        Row: {
+          account_status: string
+          avatar_url: string | null
+          city: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          kyc_status: string
+          member_id: string
+          member_role: string
+          membership_plan: string | null
+          membership_status: string
+          mobile: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          kyc_status?: string
+          member_id: string
+          member_role?: string
+          membership_plan?: string | null
+          membership_status?: string
+          mobile?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          kyc_status?: string
+          member_id?: string
+          member_role?: string
+          membership_plan?: string | null
+          membership_status?: string
+          mobile?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -847,6 +985,8 @@ export type Database = {
           balance: number | null
           created_at: string
           id: string
+          mvs_pay_balance: number
+          mvs_points_balance: number
           total_earnings: number | null
           total_withdrawn: number | null
           updated_at: string
@@ -856,6 +996,8 @@ export type Database = {
           balance?: number | null
           created_at?: string
           id?: string
+          mvs_pay_balance?: number
+          mvs_points_balance?: number
           total_earnings?: number | null
           total_withdrawn?: number | null
           updated_at?: string
@@ -865,6 +1007,8 @@ export type Database = {
           balance?: number | null
           created_at?: string
           id?: string
+          mvs_pay_balance?: number
+          mvs_points_balance?: number
           total_earnings?: number | null
           total_withdrawn?: number | null
           updated_at?: string
